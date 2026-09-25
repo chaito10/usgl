@@ -1,8 +1,8 @@
 [package]
 name = "usgl"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
-description = "USGL — Universal Systems & Glue Language. Phase 1: tree-walking interpreter, REPL, formatter, test runner, CLI."
+description = "USGL — Universal Systems & Glue Language. Tree-walking interpreter, static type checker, REPL, formatter, test runner, CLI."
 
 [lib]
 name = "usgl"

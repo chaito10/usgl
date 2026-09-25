@@ -1,14 +1,14 @@
 use std::process::ExitCode;
 
 const USAGE: &str = "\
-USGL — Universal Systems & Glue Language (Phase 1 interpreter)
+USGL — Universal Systems & Glue Language (interpreter + static type checker)
 
 Usage:
   us <file.us> [args...]      run a program
   us run <file.us> [args...]  run a program (same as above)
   us repl                     start the interactive REPL
   us test [files...]          run `test` blocks (default: all *.us in cwd)
-  us check <file.us>          syntax-check without running
+  us check <file.us>          syntax- + type-check without running
   us fmt [-w] <file.us>       print canonical formatting (_w_ = write back)
   us version | --version      print version
   us help | --help            print this help

@@ -209,4 +209,5 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, 'beta') }}
           fail_on_unmatched_files: true

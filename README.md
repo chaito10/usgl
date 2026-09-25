@@ -1,10 +1,10 @@
 # USGL — Universal Systems & Glue Language
 
 A from-scratch implementation of the USGL language described in
-[`rfc.md`](rfc.md). This repository is **Phase 1**: a dependency-free
-interpreter written in Rust with a `us` command-line interface,
-CI-tested and cross-released for Linux, macOS, Windows, Android, iOS,
-and the web (WASM).
+[`rfc.md`](rfc.md). This repository is **Phase 2**: a dependency-free
+interpreter written in Rust with static type checking, a `us` command-line
+interface, CI-tested and cross-released for Linux, macOS, Windows, Android,
+iOS, and the web (WASM).
 
 > No external crates. Only the standard library is used.
 
@@ -41,21 +41,21 @@ us help
 Exit code is `0` on success; a failed assertion or an unhandled error exits
 non-zero.
 
-## What works today (Phase 1)
+## What works today (Phase 2)
 
 | Area | Status | Notes |
 | --- | --- | --- |
-| `let` / `var` / `const` | yes | immutability is a parse-time idea; runtime enforces nothing |
+| `let` / `var` / `const` | yes | immutability is checked at type-check time |
 | Numbers, strings, chars, bools, nil | yes | `i64` ints, `f64` floats |
 | Arrays & maps | yes | `.sort`, `.keys`, `.values`, `.len`, indexing, `[]` literal |
-| Structs | yes | field access, struct literals |
-| Enums | yes | `Status.Failed(x)` constructors, `match` with bindings + `_` |
+| Structs | yes | field access, struct literals, unknown-field rejection |
+| Enums | yes | `Status.Failed(x)` constructors, `match` with bindings + `_`, variant validation |
 | `fn`, return type arrow | yes | recursion, closures, arrow bodies `fn(x) => x * 2` |
 | Higher-order: `map` / `filter` | yes | global (pipeline-friendly) |
 | Pipelines `a \|> f(x)` | yes | rewritten at parse time into `f(a, x)` |
 | `if` / `else if` / `else` | yes | both as statements and expressions (`let y = if ...`) |
 | `while`, `for .. in ..`, `loop` | yes | `break` / `continue` |
-| `?` error propagation | yes | unwraps `Result`, else aborts with the error |
+| `?` error propagation | yes | unwraps `Result` (type-checked), else aborts with the error |
 | Option / Result | yes | `Some` / `None` / `Ok` / `Err`, `.unwrap`, `.is_ok`, `.ok` |
 | String methods | yes | `trim`, `upper`, `lower`, `split`, `replace`, `contains`, `length` … |
 | JSON module | yes | `json.parse` (static `Result`) + `json.stringify` (compact / `pretty=true`) |
@@ -66,7 +66,7 @@ non-zero.
 | `test "name" { }` blocks | yes | `us test` runs them and reports pass/fail |
 | REPL | yes | multi-line input, `:clear`, `:reset`, prints `=> value` |
 | `us fmt` | yes | canonical formatting; idempotent |
-| Type checking | no | types are parsed into the AST and retained for Phase 2 |
+| Type checking | yes | Phase 2 validator (`us check`; hard gate for `us run` / `us test`) |
 | Concurrency / channels / async | no | parsed/awaited as placeholders where possible |
 | FFI / extern | no | reserved |
 
@@ -99,6 +99,7 @@ src/
   lexer.rs     tokenization (newline-significant)
   parser.rs    recursive-descent → AST
   ast.rs       AST + typed params/fields/variants
+  check.rs     Phase 2 static type checker
   eval.rs      tree-walking interpreter, closures, control flow
   value.rs     Value, Function, TypeInfo, ordering, equality
   env.rs       scope chain (modules are envs too)
@@ -150,7 +151,7 @@ Or run the wasm headlessly:
 bash$ wasmtime run us.wasm my_script.us
 ```
 
-## Phase 2 (planned)
+## Phase 3 (planned)
 
-Static type checking against the parsed type annotations, a bytecode compiler or
-WASM target, marks/threads, FFI, and a linker for multi-file projects.
+A bytecode compiler or WASM backend (type-annotated IR → native/wasm),
+marks/threads, FFI/extern wiring, and a linker for multi-file projects.
