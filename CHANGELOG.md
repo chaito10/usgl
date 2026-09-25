@@ -3,7 +3,7 @@
 All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [0.2.0-rc.1] - 2026-09-25
+## [0.2.0-rc.2] - 2026-09-25
 
 ### Added
 - Phase 2 static type checker (`src/check.rs`): scoped binding analysis with
