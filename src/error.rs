@@ -39,6 +39,11 @@ pub enum UsglError {
         message: String,
         span: Option<Span>,
     },
+    /// Static type-checking failure (Phase 2). Spans are not yet attached
+    /// to AST nodes, so only the message is carried.
+    Type {
+        message: String,
+    },
     /// Requested process exit (os.exit).
     Exit(i32),
 }
@@ -74,6 +79,7 @@ impl fmt::Display for UsglError {
                 None => write!(f, "error: {}", message),
             },
             UsglError::Exit(code) => write!(f, "exit({})", code),
+            UsglError::Type { message } => write!(f, "type error: {}", message),
         }
     }
 }

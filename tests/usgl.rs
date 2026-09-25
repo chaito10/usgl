@@ -230,6 +230,48 @@ fn check_source_rejects_bad_syntax() {
 }
 
 #[test]
+fn check_source_runs_typechecker() {
+    // Well-typed programs pass `us check`.
+    let ok = [
+        "struct P { x: int }\nlet p = P { x: 1 }\nprintln(str(p.x))",
+        "enum C { Red\n Blue }\nlet c = C.Red\nmatch c {\n C.Red => println(\"red\")\n C.Blue => println(\"blue\")\n}",
+        "map([1, 2, 3], fn(x) => x * 2)",
+        "json.parse(\"1\")?",
+        "let s = \"hi\"\nprintln(s.trim())",
+        "for ch in \"abc\" {\n println(str(ch))\n}",
+        "let fs = fs.read(\"x\")",
+    ];
+    for src in ok {
+        assert!(usgl::check_source(src, "<t>").is_ok(), "expected OK: {src}");
+    }
+
+    // Type errors are rejected by `us check`.
+    let bad = [
+        ("let x: int = \"str\"", "initializer produces"),
+        ("let y = 1\ny = 2", "immutable"),
+        ("missing_fn(1)", "unknown function"),
+        ("struct P { x: int }\nlet p = P { x: 1, y: 2 }", "no field"),
+        ("let n = 4\nlet r = n?", "Result"),
+        ("enum C { Red\n Blue }\nlet c = C.Red\nmatch c {\n C.Red => println(\"red\")\n C.Green => println(\"green\")\n}",
+            "no variant"),
+    ];
+    for (src, needle) in bad {
+        let err = usgl::check_source(src, "<t>").unwrap_err().to_string();
+        assert!(
+            err.contains(needle),
+            "expected `{needle}` in error for: {src}\ngot: {err}"
+        );
+    }
+}
+
+#[test]
+fn typecheck_source_reports_error_count() {
+    let errs =
+        usgl::typecheck_source("let a: int = \"x\"\nlet b: bool = 3\nmissing()", "<t>").unwrap();
+    assert_eq!(errs.len(), 3, "one error per bad line: {errs:?}");
+}
+
+#[test]
 fn format_source_is_stable() {
     let src = "let a=[1,2,3]\nif a[0]>0 {\nprintln(\"yes\")\n}\n";
     let once = usgl::format_source(src, "<t>").unwrap();

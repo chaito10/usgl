@@ -89,16 +89,20 @@ fn run_file(path: &str, prog_args: &[String]) -> u8 {
             return 1;
         }
     };
+    let program = match usgl::parser::parse(&source, path) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("{}", e);
+            return 1;
+        }
+    };
+    if !typecheck_gate(&program, path) {
+        return 1;
+    }
     let mut interp = usgl::eval::Interp::new(path);
     interp.cli_args = prog_args.to_vec();
-    let code = match usgl::parser::parse(&source, path) {
-        Ok(program) => match interp.run(&program, true) {
-            Ok(code) => Some(code),
-            Err(e) => {
-                eprintln!("{}", e);
-                Some(1)
-            }
-        },
+    let code = match interp.run(&program, true) {
+        Ok(code) => Some(code),
         Err(e) => {
             eprintln!("{}", e);
             Some(1)
@@ -106,6 +110,20 @@ fn run_file(path: &str, prog_args: &[String]) -> u8 {
     };
     flush_out(&interp);
     code.unwrap_or(1) as u8
+}
+
+/// Run the static type checker; print all errors and return false if any.
+fn typecheck_gate(program: &usgl::ast::Program, path: &str) -> bool {
+    let errors = usgl::check::Checker::new().check(program);
+    if errors.is_empty() {
+        true
+    } else {
+        eprintln!("type error: {}", path);
+        for e in &errors {
+            eprintln!("  {}", e);
+        }
+        false
+    }
 }
 
 fn flush_out(interp: &usgl::eval::Interp) {
@@ -126,9 +144,13 @@ fn check(path: &str) -> u8 {
         }
     };
     match usgl::parser::parse(&source, path) {
-        Ok(_) => {
-            println!("OK  {}", path);
-            0
+        Ok(program) => {
+            if typecheck_gate(&program, path) {
+                println!("OK  {}", path);
+                0
+            } else {
+                1
+            }
         }
         Err(e) => {
             eprintln!("{}", e);
@@ -216,6 +238,9 @@ fn run_test_file(path: &str) -> (usize, usize) {
             return (0, 1);
         }
     };
+    if !typecheck_gate(&program, path) {
+        return (0, 1);
+    }
     let tests = usgl::ast::collect_tests(&program);
     if tests.is_empty() {
         return (0, 0);

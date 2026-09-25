@@ -1,5 +1,6 @@
 pub mod ast;
 pub mod builtins;
+pub mod check;
 pub mod env;
 pub mod error;
 pub mod eval;
@@ -47,10 +48,21 @@ fn run_in(interp: &mut Interp, source: &str, file: &str, run_main: bool) -> RtRe
     interp.run(&program, run_main)
 }
 
-/// Syntax-check only.
+/// Syntax- and type-check only.
 pub fn check_source(source: &str, file: &str) -> RtResult<usize> {
     let program = parse_source(source, file)?;
-    Ok(program.stmts.len())
+    let errors = check::Checker::new().check(&program);
+    if errors.is_empty() {
+        Ok(program.stmts.len())
+    } else {
+        Err(check::to_error(errors, file))
+    }
+}
+
+/// Parse and static type-check, returning the collected errors (empty = ok).
+pub fn typecheck_source(source: &str, file: &str) -> RtResult<Vec<String>> {
+    let program = parse_source(source, file)?;
+    Ok(check::Checker::new().check(&program))
 }
 
 /// Parse and print the canonical USGL formatting for `source`.

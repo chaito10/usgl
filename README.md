@@ -94,7 +94,7 @@ test "fibonacci" {
 ```
 .github/workflows/
   ci.yml        fmt check + tests (ubuntu/windows/macos) + wasm smoke
-  release.yml   16-target cross-build matrix + GitHub release
+  release.yml   13-target cross-build matrix + GitHub release
 src/
   lexer.rs     tokenization (newline-significant)
   parser.rs    recursive-descent → AST
@@ -126,7 +126,7 @@ GitHub Release when a `v*` tag is pushed (or on `workflow_dispatch`):
 | Linux | x86_64, i686, aarch64, arm, armv7, riscv64 | `cross` (GNU) |
 | Windows | x86_64, i686, aarch64 | `cargo-xwin` (MSVC `.exe`) |
 | macOS | x86_64, aarch64, **universal2** | native macOS runner + `lipo` |
-| Android | aarch64, armv7, i686, x86_64 | `cross` (NDK images) |
+| Android | armv7 (armeabi-v7a) | `cross` (NDK image) |
 | iOS | aarch64 (device), x86_64 + arm64 (sim) | native macOS runner |
 | Web | `us.wasm` (WASI), `us-bare.wasm` | `cargo build --target wasm32-*` |
 
