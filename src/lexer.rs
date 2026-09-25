@@ -47,7 +47,13 @@ pub struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new(source: &'a str, file: &'a str) -> Self {
-        Lexer { chars: source.chars().collect(), pos: 0, line: 1, col: 1, file }
+        Lexer {
+            chars: source.chars().collect(),
+            pos: 0,
+            line: 1,
+            col: 1,
+            file,
+        }
     }
 
     fn cur(&self) -> Option<char> {
@@ -80,9 +86,15 @@ impl<'a> Lexer<'a> {
                 Some(c) => c,
                 None => {
                     if pending_nl {
-                        out.push(Token { kind: Tok::Newline, span: self.span() });
+                        out.push(Token {
+                            kind: Tok::Newline,
+                            span: self.span(),
+                        });
                     }
-                    out.push(Token { kind: Tok::Eof, span: self.span() });
+                    out.push(Token {
+                        kind: Tok::Eof,
+                        span: self.span(),
+                    });
                     return Ok(out);
                 }
             };
@@ -93,7 +105,10 @@ impl<'a> Lexer<'a> {
                 }
                 '\n' => {
                     if !pending_nl {
-                        out.push(Token { kind: Tok::Newline, span: self.span() });
+                        out.push(Token {
+                            kind: Tok::Newline,
+                            span: self.span(),
+                        });
                         pending_nl = true;
                     }
                     self.bump();
@@ -172,7 +187,10 @@ impl<'a> Lexer<'a> {
             }
             let v = i64::from_str_radix(&raw, 16)
                 .map_err(|_| UsglError::lex("invalid hexadecimal literal", start.clone()))?;
-            return Ok(Token { kind: Tok::Int(v), span: start });
+            return Ok(Token {
+                kind: Tok::Int(v),
+                span: start,
+            });
         }
 
         let mut is_float = false;
@@ -187,7 +205,9 @@ impl<'a> Lexer<'a> {
                 raw.push('.');
                 self.bump();
             } else if (c == 'e' || c == 'E')
-                && self.peek().map_or(false, |n| n.is_ascii_digit() || n == '+' || n == '-')
+                && self
+                    .peek()
+                    .map_or(false, |n| n.is_ascii_digit() || n == '+' || n == '-')
             {
                 is_float = true;
                 raw.push('e');
@@ -205,12 +225,18 @@ impl<'a> Lexer<'a> {
             let v = raw
                 .parse::<f64>()
                 .map_err(|_| UsglError::lex(format!("invalid number `{}`", raw), start.clone()))?;
-            Ok(Token { kind: Tok::Float(v), span: start })
+            Ok(Token {
+                kind: Tok::Float(v),
+                span: start,
+            })
         } else {
-            let v = raw
-                .parse::<i64>()
-                .map_err(|_| UsglError::lex(format!("integer `{}` out of range", raw), start.clone()))?;
-            Ok(Token { kind: Tok::Int(v), span: start })
+            let v = raw.parse::<i64>().map_err(|_| {
+                UsglError::lex(format!("integer `{}` out of range", raw), start.clone())
+            })?;
+            Ok(Token {
+                kind: Tok::Int(v),
+                span: start,
+            })
         }
     }
 
@@ -227,9 +253,9 @@ impl<'a> Lexer<'a> {
             match c {
                 '"' => break,
                 '\\' => {
-                    let e = self
-                        .cur()
-                        .ok_or_else(|| UsglError::lex("unterminated escape sequence", start.clone()))?;
+                    let e = self.cur().ok_or_else(|| {
+                        UsglError::lex("unterminated escape sequence", start.clone())
+                    })?;
                     self.bump();
                     match e {
                         'n' => s.push('\n'),
@@ -251,7 +277,10 @@ impl<'a> Lexer<'a> {
                 other => s.push(other),
             }
         }
-        Ok(Token { kind: Tok::Str(s), span: start })
+        Ok(Token {
+            kind: Tok::Str(s),
+            span: start,
+        })
     }
 
     fn char_lit(&mut self) -> Result<Token, UsglError> {
@@ -286,10 +315,16 @@ impl<'a> Lexer<'a> {
             c
         };
         if self.cur() != Some('\'') {
-            return Err(UsglError::lex("expected `'` to close character literal", start));
+            return Err(UsglError::lex(
+                "expected `'` to close character literal",
+                start,
+            ));
         }
         self.bump();
-        Ok(Token { kind: Tok::Char(c), span: start })
+        Ok(Token {
+            kind: Tok::Char(c),
+            span: start,
+        })
     }
 
     fn op(&mut self) -> Result<Tok, UsglError> {

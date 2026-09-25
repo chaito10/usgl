@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: rustfmt
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Check formatting
+        run: cargo fmt --check
+
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release
+      - name: Run tests
+        run: cargo test --release
+
+  wasm:
+    name: wasm smoke
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - name: Build wasm
+        run: cargo build --release --target wasm32-wasip1
+      - uses: taiki-e/install-action@wasmtime
+      - name: Run interpreter under wasmtime
+        shell: bash
+        run: |
+          printf 'let n = 6\ntest "six" {\n  assert_eq(n, 6)\n}\nprintln("wasm ok")\n' > /tmp/ok.us
+          wasmtime run --dir /tmp target/wasm32-wasip1/release/us.wasm /tmp/ok.us

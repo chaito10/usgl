@@ -33,7 +33,11 @@ pub fn run_source(source: &str, file: &str) -> RtResult<i32> {
 }
 
 /// Like `run_source` but sends `println!` output to a caller-owned buffer.
-pub fn run_source_with_output(source: &str, file: &str, out: Rc<RefCell<Vec<u8>>>) -> RtResult<i32> {
+pub fn run_source_with_output(
+    source: &str,
+    file: &str,
+    out: Rc<RefCell<Vec<u8>>>,
+) -> RtResult<i32> {
     let mut interp = Interp::with_out(file, out);
     run_in(&mut interp, source, file, true)
 }

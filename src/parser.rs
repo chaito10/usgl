@@ -1,7 +1,7 @@
 use crate::ast::*;
 use crate::error::{RtResult, Span, UsglError};
 use crate::lexer::Lexer;
-use crate::token::{Tok, Token, describe};
+use crate::token::{describe, Tok, Token};
 
 pub struct Parser {
     tokens: Vec<Token>,
@@ -14,7 +14,12 @@ pub struct Parser {
 
 pub fn parse(source: &str, file: &str) -> RtResult<Program> {
     let tokens = Lexer::new(source, file).tokenize()?;
-    let mut p = Parser { tokens, pos: 0, pending_comments: Vec::new(), suppress_struct_lit: false };
+    let mut p = Parser {
+        tokens,
+        pos: 0,
+        pending_comments: Vec::new(),
+        suppress_struct_lit: false,
+    };
     p.program()
 }
 
@@ -53,7 +58,10 @@ impl Parser {
             self.next();
             Ok(())
         } else {
-            Err(UsglError::parse(format!("{}; found {}", msg, describe(&self.peek().kind)), self.pos_span()))
+            Err(UsglError::parse(
+                format!("{}; found {}", msg, describe(&self.peek().kind)),
+                self.pos_span(),
+            ))
         }
     }
     fn expect_ident(&mut self, what: &str) -> RtResult<String> {
@@ -141,7 +149,10 @@ impl Parser {
             self.skip_sep();
         }
         let eof_comments = self.cur_comments();
-        Ok(Program { stmts, eof_comments })
+        Ok(Program {
+            stmts,
+            eof_comments,
+        })
     }
 
     fn block_until(&mut self, closing: &Tok) -> RtResult<Vec<Stmt>> {
@@ -246,11 +257,17 @@ impl Parser {
             Tok::Unsafe => {
                 self.next();
                 let body = self.parse_block()?;
-                Ok(StmtKind::Block { body, unsafe_block: true })
+                Ok(StmtKind::Block {
+                    body,
+                    unsafe_block: true,
+                })
             }
             Tok::LBrace => {
                 let body = self.parse_block()?;
-                Ok(StmtKind::Block { body, unsafe_block: false })
+                Ok(StmtKind::Block {
+                    body,
+                    unsafe_block: false,
+                })
             }
             Tok::Spawn => Err(UsglError::parse(
                 "`spawn` is not implemented in the Phase 1 interpreter",
@@ -268,7 +285,10 @@ impl Parser {
                     Tok::Newline | Tok::Semi | Tok::RBrace | Tok::Eof | Tok::Comma
                 ) {
                     return Err(UsglError::parse(
-                        format!("expected end of statement; found {}", describe(&self.peek().kind)),
+                        format!(
+                            "expected end of statement; found {}",
+                            describe(&self.peek().kind)
+                        ),
                         self.pos_span(),
                     ));
                 }
@@ -293,7 +313,12 @@ impl Parser {
         } else {
             Expr::Int(0)
         };
-        Ok(StmtKind::Let { name, mutable, ty, value })
+        Ok(StmtKind::Let {
+            name,
+            mutable,
+            ty,
+            value,
+        })
     }
 
     fn fn_decl(&mut self, is_async: bool) -> RtResult<StmtKind> {
@@ -306,7 +331,13 @@ impl Parser {
             None
         };
         let body = self.parse_block()?;
-        Ok(StmtKind::Fn { name, params, ret, body, is_async })
+        Ok(StmtKind::Fn {
+            name,
+            params,
+            ret,
+            body,
+            is_async,
+        })
     }
 
     fn parse_params(&mut self) -> RtResult<Vec<Param>> {
@@ -411,7 +442,10 @@ impl Parser {
             self.next();
             s
         } else {
-            return Err(UsglError::parse("expected test name string", self.pos_span()));
+            return Err(UsglError::parse(
+                "expected test name string",
+                self.pos_span(),
+            ));
         };
         let body = self.parse_block()?;
         Ok(StmtKind::Test { name, body })
@@ -427,7 +461,10 @@ impl Parser {
             self.expect(&Tok::Else, "expected `else`")?;
             if self.at(&Tok::If) {
                 let inner = self.if_stmt()?;
-                stmts.push(Stmt { comments: Vec::new(), kind: inner });
+                stmts.push(Stmt {
+                    comments: Vec::new(),
+                    kind: inner,
+                });
             } else {
                 stmts = self.parse_block()?;
             }
@@ -451,12 +488,19 @@ impl Parser {
             self.expect(&Tok::Else, "expected `else`")?;
             if self.at(&Tok::If) {
                 let inner = self.if_stmt()?;
-                alt.push(Stmt { comments: Vec::new(), kind: inner });
+                alt.push(Stmt {
+                    comments: Vec::new(),
+                    kind: inner,
+                });
             } else {
                 alt = self.parse_block()?;
             }
         }
-        Ok(Expr::If { cond: Box::new(cond), then, alt })
+        Ok(Expr::If {
+            cond: Box::new(cond),
+            then,
+            alt,
+        })
     }
 
     /// Look ahead past newlines/comments for an `else`, but never across a
@@ -483,7 +527,10 @@ impl Parser {
         self.expect(&Tok::For, "expected `for`")?;
         let name = self.expect_ident("loop variable")?;
         if !(matches!(&self.peek().kind, Tok::Ident(s) if s == "in")) {
-            return Err(UsglError::parse("expected `in` in for loop", self.pos_span()));
+            return Err(UsglError::parse(
+                "expected `in` in for loop",
+                self.pos_span(),
+            ));
         }
         self.next();
         let iter = self.expr()?;
@@ -511,7 +558,10 @@ impl Parser {
                 self.parse_block()?
             } else {
                 let e = self.expr()?;
-                vec![Stmt { comments: Vec::new(), kind: StmtKind::Expr(e) }]
+                vec![Stmt {
+                    comments: Vec::new(),
+                    kind: StmtKind::Expr(e),
+                }]
             };
             arms.push(Arm { pat, body });
             self.skip_nl();
@@ -559,11 +609,19 @@ impl Parser {
             Tok::Some => {
                 self.next();
                 let inner = self.paren_pattern()?;
-                Ok(Pattern::Variant { ty: None, name: "Some".into(), inner: Some(Box::new(inner)) })
+                Ok(Pattern::Variant {
+                    ty: None,
+                    name: "Some".into(),
+                    inner: Some(Box::new(inner)),
+                })
             }
             Tok::None => {
                 self.next();
-                Ok(Pattern::Variant { ty: None, name: "None".into(), inner: None })
+                Ok(Pattern::Variant {
+                    ty: None,
+                    name: "None".into(),
+                    inner: None,
+                })
             }
             Tok::Ok => {
                 self.next();
@@ -573,7 +631,11 @@ impl Parser {
                 } else {
                     None
                 };
-                Ok(Pattern::Variant { ty: None, name: "Ok".into(), inner })
+                Ok(Pattern::Variant {
+                    ty: None,
+                    name: "Ok".into(),
+                    inner,
+                })
             }
             Tok::Err => {
                 self.next();
@@ -583,7 +645,11 @@ impl Parser {
                 } else {
                     None
                 };
-                Ok(Pattern::Variant { ty: None, name: "Err".into(), inner })
+                Ok(Pattern::Variant {
+                    ty: None,
+                    name: "Err".into(),
+                    inner,
+                })
             }
             Tok::Ident(s) => {
                 let s = s.clone();
@@ -601,16 +667,27 @@ impl Parser {
                     } else {
                         None
                     };
-                    Ok(Pattern::Variant { ty: Some(s), name: v, inner })
+                    Ok(Pattern::Variant {
+                        ty: Some(s),
+                        name: v,
+                        inner,
+                    })
                 } else if self.at(&Tok::LParen) {
                     let p = self.paren_pattern()?;
-                    Ok(Pattern::Variant { ty: None, name: s, inner: Some(Box::new(p)) })
+                    Ok(Pattern::Variant {
+                        ty: None,
+                        name: s,
+                        inner: Some(Box::new(p)),
+                    })
                 } else {
                     Ok(Pattern::Bind(s))
                 }
             }
             _ => Err(UsglError::parse(
-                format!("invalid match pattern; found {}", describe(&self.peek().kind)),
+                format!(
+                    "invalid match pattern; found {}",
+                    describe(&self.peek().kind)
+                ),
                 span,
             )),
         }
@@ -635,7 +712,13 @@ impl Parser {
             self.next();
             let gen = self.parse_type()?;
             self.expect(&Tok::RBrack, "expected `]` in slice type")?;
-            return Ok(Type { is_ref, is_mut, is_ptr, base: "[]".into(), generics: vec![gen] });
+            return Ok(Type {
+                is_ref,
+                is_mut,
+                is_ptr,
+                base: "[]".into(),
+                generics: vec![gen],
+            });
         }
         let base = self.expect_ident("type name")?;
         let mut generics = Vec::new();
@@ -651,7 +734,13 @@ impl Parser {
             }
             self.expect(&Tok::RBrack, "expected `]` in generic type")?;
         }
-        Ok(Type { is_ref, is_mut, is_ptr, base, generics })
+        Ok(Type {
+            is_ref,
+            is_mut,
+            is_ptr,
+            base,
+            generics,
+        })
     }
 
     // ---------- expressions ----------
@@ -671,7 +760,10 @@ impl Parser {
                     self.pos_span(),
                 ));
             }
-            return Ok(Expr::Assign { target: Box::new(l), value: Box::new(r) });
+            return Ok(Expr::Assign {
+                target: Box::new(l),
+                value: Box::new(r),
+            });
         }
         Ok(l)
     }
@@ -697,9 +789,17 @@ impl Parser {
             self.skip_nl();
             let rhs = self.postfix()?;
             l = match rhs {
-                Expr::Call { callee, generics, mut args } => {
+                Expr::Call {
+                    callee,
+                    generics,
+                    mut args,
+                } => {
                     args.insert(0, Arg::pos(l));
-                    Expr::Call { callee, generics, args }
+                    Expr::Call {
+                        callee,
+                        generics,
+                        args,
+                    }
                 }
                 Expr::Ident(name) => Expr::Call {
                     callee: Box::new(Expr::Ident(name)),
@@ -742,7 +842,11 @@ impl Parser {
             let Some(op) = op else { break };
             self.next();
             let r = self.equality()?;
-            l = Expr::Binary { op, l: Box::new(l), r: Box::new(r) };
+            l = Expr::Binary {
+                op,
+                l: Box::new(l),
+                r: Box::new(r),
+            };
         }
         Ok(l)
     }
@@ -760,7 +864,11 @@ impl Parser {
             let Some(op) = op else { break };
             self.next();
             let r = self.relational()?;
-            l = Expr::Binary { op, l: Box::new(l), r: Box::new(r) };
+            l = Expr::Binary {
+                op,
+                l: Box::new(l),
+                r: Box::new(r),
+            };
         }
         Ok(l)
     }
@@ -782,7 +890,11 @@ impl Parser {
             let Some(op) = op else { break };
             self.next();
             let r = self.additive()?;
-            l = Expr::Binary { op, l: Box::new(l), r: Box::new(r) };
+            l = Expr::Binary {
+                op,
+                l: Box::new(l),
+                r: Box::new(r),
+            };
         }
         Ok(l)
     }
@@ -800,7 +912,11 @@ impl Parser {
             let Some(op) = op else { break };
             self.next();
             let r = self.multiplicative()?;
-            l = Expr::Binary { op, l: Box::new(l), r: Box::new(r) };
+            l = Expr::Binary {
+                op,
+                l: Box::new(l),
+                r: Box::new(r),
+            };
         }
         Ok(l)
     }
@@ -820,7 +936,11 @@ impl Parser {
             let Some(op) = op else { break };
             self.next();
             let r = self.unary()?;
-            l = Expr::Binary { op, l: Box::new(l), r: Box::new(r) };
+            l = Expr::Binary {
+                op,
+                l: Box::new(l),
+                r: Box::new(r),
+            };
         }
         Ok(l)
     }
@@ -829,12 +949,18 @@ impl Parser {
         if self.at(&Tok::Minus) {
             self.next();
             let e = self.unary()?;
-            return Ok(Expr::Unary { op: '-', e: Box::new(e) });
+            return Ok(Expr::Unary {
+                op: '-',
+                e: Box::new(e),
+            });
         }
         if self.at(&Tok::Bang) {
             self.next();
             let e = self.unary()?;
-            return Ok(Expr::Unary { op: '!', e: Box::new(e) });
+            return Ok(Expr::Unary {
+                op: '!',
+                e: Box::new(e),
+            });
         }
         if self.at(&Tok::Await) {
             self.next();
@@ -855,20 +981,30 @@ impl Parser {
             if self.at(&Tok::LParen) {
                 let args = self.call_args()?;
                 let generics = std::mem::take(&mut pending_generics);
-                e = Expr::Call { callee: Box::new(e), generics, args };
+                e = Expr::Call {
+                    callee: Box::new(e),
+                    generics,
+                    args,
+                };
                 continue;
             }
             if self.at(&Tok::Dot) {
                 self.next();
                 let name = self.expect_ident("member name")?;
-                e = Expr::Member { base: Box::new(e), name };
+                e = Expr::Member {
+                    base: Box::new(e),
+                    name,
+                };
                 continue;
             }
             if self.at(&Tok::LBrack) {
                 self.next();
                 let idx = self.expr()?;
                 self.expect(&Tok::RBrack, "expected `]`")?;
-                e = Expr::Index { base: Box::new(e), index: Box::new(idx) };
+                e = Expr::Index {
+                    base: Box::new(e),
+                    index: Box::new(idx),
+                };
                 continue;
             }
             if self.at(&Tok::Question) {
@@ -948,7 +1084,10 @@ impl Parser {
                     self.next();
                     self.next();
                     let value = self.expr()?;
-                    args.push(Arg { name: Some(name), value });
+                    args.push(Arg {
+                        name: Some(name),
+                        value,
+                    });
                 } else {
                     let value = self.expr()?;
                     args.push(Arg::pos(value));
@@ -1014,21 +1153,45 @@ impl Parser {
             Tok::Some => {
                 self.next();
                 let payload = self.paren_expr()?;
-                Ok(Expr::Ctor { ty: None, variant: "Some".into(), payload: Some(Box::new(payload)) })
+                Ok(Expr::Ctor {
+                    ty: None,
+                    variant: "Some".into(),
+                    payload: Some(Box::new(payload)),
+                })
             }
             Tok::None => {
                 self.next();
-                Ok(Expr::Ctor { ty: None, variant: "None".into(), payload: None })
+                Ok(Expr::Ctor {
+                    ty: None,
+                    variant: "None".into(),
+                    payload: None,
+                })
             }
             Tok::Ok => {
                 self.next();
-                let payload = if self.at(&Tok::LParen) { Some(Box::new(self.paren_expr()?)) } else { None };
-                Ok(Expr::Ctor { ty: None, variant: "Ok".into(), payload })
+                let payload = if self.at(&Tok::LParen) {
+                    Some(Box::new(self.paren_expr()?))
+                } else {
+                    None
+                };
+                Ok(Expr::Ctor {
+                    ty: None,
+                    variant: "Ok".into(),
+                    payload,
+                })
             }
             Tok::Err => {
                 self.next();
-                let payload = if self.at(&Tok::LParen) { Some(Box::new(self.paren_expr()?)) } else { None };
-                Ok(Expr::Ctor { ty: None, variant: "Err".into(), payload })
+                let payload = if self.at(&Tok::LParen) {
+                    Some(Box::new(self.paren_expr()?))
+                } else {
+                    None
+                };
+                Ok(Expr::Ctor {
+                    ty: None,
+                    variant: "Err".into(),
+                    payload,
+                })
             }
             Tok::Fn => self.fn_expr(),
             Tok::LParen => {
@@ -1066,18 +1229,45 @@ impl Parser {
                 Ok(Expr::Array(items))
             }
             Tok::LBrace => self.map_literal(),
-            Tok::Amp => Err(UsglError::parse("borrow `&` is only allowed in type annotations in Phase 1", span)),
-            Tok::Pipe | Tok::PipePipe | Tok::AmpAmp | Tok::Eq | Tok::EqEq | Tok::Lt | Tok::LtEq
-            | Tok::Gt | Tok::GtEq | Tok::Plus | Tok::Slash | Tok::Star | Tok::Percent
-            | Tok::Dot | Tok::DotDot | Tok::Question | Tok::Semi | Tok::Comma | Tok::RBrace
-            | Tok::RParen | Tok::RBrack | Tok::Newline | Tok::FatArrow | Tok::RetArrow => Err(
-                UsglError::parse(
-                    format!("expected an expression; found {}", describe(&self.peek().kind)),
-                    span,
+            Tok::Amp => Err(UsglError::parse(
+                "borrow `&` is only allowed in type annotations in Phase 1",
+                span,
+            )),
+            Tok::Pipe
+            | Tok::PipePipe
+            | Tok::AmpAmp
+            | Tok::Eq
+            | Tok::EqEq
+            | Tok::Lt
+            | Tok::LtEq
+            | Tok::Gt
+            | Tok::GtEq
+            | Tok::Plus
+            | Tok::Slash
+            | Tok::Star
+            | Tok::Percent
+            | Tok::Dot
+            | Tok::DotDot
+            | Tok::Question
+            | Tok::Semi
+            | Tok::Comma
+            | Tok::RBrace
+            | Tok::RParen
+            | Tok::RBrack
+            | Tok::Newline
+            | Tok::FatArrow
+            | Tok::RetArrow => Err(UsglError::parse(
+                format!(
+                    "expected an expression; found {}",
+                    describe(&self.peek().kind)
                 ),
-            ),
+                span,
+            )),
             _ => Err(UsglError::parse(
-                format!("expected an expression; found {}", describe(&self.peek().kind)),
+                format!(
+                    "expected an expression; found {}",
+                    describe(&self.peek().kind)
+                ),
                 span,
             )),
         }
@@ -1105,10 +1295,18 @@ impl Parser {
             self.next();
             self.skip_nl();
             let arrow = self.expr()?;
-            Ok(Expr::Fn { params, arrow: Some(Box::new(arrow)), body: Vec::new() })
+            Ok(Expr::Fn {
+                params,
+                arrow: Some(Box::new(arrow)),
+                body: Vec::new(),
+            })
         } else {
             let body = self.parse_block()?;
-            Ok(Expr::Fn { params, arrow: None, body })
+            Ok(Expr::Fn {
+                params,
+                arrow: None,
+                body,
+            })
         }
     }
 
@@ -1155,7 +1353,10 @@ impl Parser {
                 }
                 other => {
                     return Err(UsglError::parse(
-                        format!("map key must be a string or identifier; found {}", describe(other)),
+                        format!(
+                            "map key must be a string or identifier; found {}",
+                            describe(other)
+                        ),
                         self.pos_span(),
                     ))
                 }

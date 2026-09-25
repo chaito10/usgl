@@ -30,10 +30,7 @@ fn arithmetic_precedence() {
 
 #[test]
 fn let_and_var() {
-    let out = run_ok(
-        "let a = 1\nvar b = 2\nb = b + a\nprintln(str(b))",
-        0,
-    );
+    let out = run_ok("let a = 1\nvar b = 2\nb = b + a\nprintln(str(b))", 0);
     assert_eq!(out, "3\n");
 }
 
@@ -186,19 +183,13 @@ fn map_properties() {
 
 #[test]
 fn array_sort() {
-    let out = run_ok(
-        "let a = [3, 1, 2]\nprintln(str(a.sort))",
-        0,
-    );
+    let out = run_ok("let a = [3, 1, 2]\nprintln(str(a.sort))", 0);
     assert_eq!(out, "[1, 2, 3]\n");
 }
 
 #[test]
 fn string_methods() {
-    let out = run_ok(
-        "println(\"  hi  \".trim().upper())",
-        0,
-    );
+    let out = run_ok("println(\"  hi  \".trim().upper())", 0);
     assert_eq!(out, "HI\n");
 }
 
@@ -211,16 +202,22 @@ fn strings_length_property() {
 #[test]
 fn map_literal_shadow_on_call() {
     // A stored map key wins over the built-in method, matching RFC data-as-code.
-    let out = run_ok(
-        "let m = { \"keys\": \"stored\" }\nprintln(m.keys)",
-        0,
-    );
+    let out = run_ok("let m = { \"keys\": \"stored\" }\nprintln(m.keys)", 0);
     assert_eq!(out, "stored\n");
 }
 
 #[test]
 fn shell_capture() {
-    let out = run_ok("println(str(process.run(\"cmd\", [\"/c\", \"echo\", \"us\"]).stdout.trim()))", 0);
+    #[cfg(target_os = "windows")]
+    let out = run_ok(
+        "println(str(process.run(\"cmd\", [\"/c\", \"echo\", \"us\"]).stdout.trim()))",
+        0,
+    );
+    #[cfg(not(target_os = "windows"))]
+    let out = run_ok(
+        "println(str(process.run(\"sh\", [\"-c\", \"echo us\"]).stdout.trim()))",
+        0,
+    );
     assert_eq!(out, "us\n");
 }
 
@@ -243,13 +240,16 @@ fn format_source_is_stable() {
 #[test]
 fn tokenize_basics() {
     let toks = usgl::tokenize("let x = 1 + 2", "<t>").unwrap();
-    let kinds: Vec<&str> = toks.iter().map(|t| match &t.kind {
-        usgl::token::Tok::Let => "let",
-        usgl::token::Tok::Ident(_) => "ident",
-        usgl::token::Tok::Eq => "=",
-        usgl::token::Tok::Int(_) => "int",
-        usgl::token::Tok::Plus => "+",
-        _ => "other",
-    }).collect();
+    let kinds: Vec<&str> = toks
+        .iter()
+        .map(|t| match &t.kind {
+            usgl::token::Tok::Let => "let",
+            usgl::token::Tok::Ident(_) => "ident",
+            usgl::token::Tok::Eq => "=",
+            usgl::token::Tok::Int(_) => "int",
+            usgl::token::Tok::Plus => "+",
+            _ => "other",
+        })
+        .collect();
     assert_eq!(kinds, ["let", "ident", "=", "int", "+", "int", "other"]);
 }

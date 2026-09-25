@@ -149,7 +149,12 @@ impl Interp {
 
     pub fn stmt(&mut self, s: &Stmt, env: &Rc<Env>) -> EResult<Value> {
         match &s.kind {
-            StmtKind::Let { name, mutable, value, .. } => {
+            StmtKind::Let {
+                name,
+                mutable,
+                value,
+                ..
+            } => {
                 let v = self.expr(value, env)?;
                 env.define(name, v, *mutable).map_err(Abort::Err)?;
                 Ok(Value::Nil)
@@ -161,7 +166,8 @@ impl Interp {
                     StmtKind::Fn { name, .. } => name.clone(),
                     _ => unreachable!(),
                 };
-                env.define(&name, Value::Function(f), false).map_err(Abort::Err)?;
+                env.define(&name, Value::Function(f), false)
+                    .map_err(Abort::Err)?;
                 Ok(Value::Nil)
             }
             StmtKind::Return(v) => {
@@ -238,7 +244,10 @@ impl Interp {
             StmtKind::Struct { name, .. } => {
                 env.define(
                     name,
-                    Value::TypeInfo { name: name.clone(), kind: TypeKind::Struct },
+                    Value::TypeInfo {
+                        name: name.clone(),
+                        kind: TypeKind::Struct,
+                    },
                     false,
                 )
                 .map_err(Abort::Err)?;
@@ -247,7 +256,10 @@ impl Interp {
             StmtKind::Enum { name, .. } => {
                 env.define(
                     name,
-                    Value::TypeInfo { name: name.clone(), kind: TypeKind::Enum },
+                    Value::TypeInfo {
+                        name: name.clone(),
+                        kind: TypeKind::Enum,
+                    },
                     false,
                 )
                 .map_err(Abort::Err)?;
@@ -285,7 +297,13 @@ impl Interp {
 
     fn closure_from_decl(&self, s: &Stmt, env: &Rc<Env>) -> EResult<Rc<Function>> {
         match &s.kind {
-            StmtKind::Fn { name, params, body, is_async: _, .. } => {
+            StmtKind::Fn {
+                name,
+                params,
+                body,
+                is_async: _,
+                ..
+            } => {
                 let data = Rc::new(ClosureData {
                     params: params.clone(),
                     arrow: None,
@@ -304,7 +322,10 @@ impl Interp {
     fn iter_values(&self, v: Value) -> EResult<Vec<Value>> {
         match v {
             Value::Array(a) => Ok(a.borrow().clone()),
-            Value::Str(s) => Ok(s.chars().map(|c| Value::Str(Rc::from(c.to_string()))).collect()),
+            Value::Str(s) => Ok(s
+                .chars()
+                .map(|c| Value::Str(Rc::from(c.to_string())))
+                .collect()),
             Value::Range { start, end } => {
                 if start >= end {
                     Ok(Vec::new())
@@ -312,7 +333,11 @@ impl Interp {
                     Ok((start..end).map(Value::Int).collect())
                 }
             }
-            Value::Map(m) => Ok(m.borrow().iter().map(|(k, _)| Value::Str(Rc::from(k.as_str()))).collect()),
+            Value::Map(m) => Ok(m
+                .borrow()
+                .iter()
+                .map(|(k, _)| Value::Str(Rc::from(k.as_str())))
+                .collect()),
             other => Err(rt_err(format!(
                 "cannot iterate over `{}`",
                 other.type_name()
@@ -329,13 +354,14 @@ impl Interp {
         }
         // std::fs access happens before evaluating the module so we can import
         // files next to the importing source.
-        let path = Path::new(&self.file_dir()).join(parts.join("/")).with_extension("us");
+        let path = Path::new(&self.file_dir())
+            .join(parts.join("/"))
+            .with_extension("us");
         if path.exists() {
-            let source = std::fs::read_to_string(&path).map_err(|e| {
-                rt_err(format!("cannot read module `{}`: {}", full, e))
-            })?;
-            let program = crate::parser::parse(&source, &path.to_string_lossy())
-                .map_err(Abort::Err)?;
+            let source = std::fs::read_to_string(&path)
+                .map_err(|e| rt_err(format!("cannot read module `{}`: {}", full, e)))?;
+            let program =
+                crate::parser::parse(&source, &path.to_string_lossy()).map_err(Abort::Err)?;
             let root = Env::new(None, Some(full.clone()));
             self.modules.insert(full.clone(), root.clone());
             let prev_file = self.file.clone();
@@ -389,7 +415,8 @@ impl Interp {
                         match &basev {
                             Value::Struct(s) => {
                                 let mut s = s.borrow_mut();
-                                if let Some((_, fv)) = s.fields.iter_mut().find(|(k, _)| k == name) {
+                                if let Some((_, fv)) = s.fields.iter_mut().find(|(k, _)| k == name)
+                                {
                                     *fv = v.clone();
                                     slot = Some(());
                                 }
@@ -414,7 +441,10 @@ impl Interp {
                         if slot.is_some() {
                             Ok(v)
                         } else {
-                            Err(rt_err(format!("type has no member `{}` (missing field target)", name)))
+                            Err(rt_err(format!(
+                                "type has no member `{}` (missing field target)",
+                                name
+                            )))
                         }
                     }
                     Expr::Index { base, index } => {
@@ -507,17 +537,29 @@ impl Interp {
                     fields: vals,
                 }))))
             }
-            Expr::Ctor { ty, variant, payload } => {
+            Expr::Ctor {
+                ty,
+                variant,
+                payload,
+            } => {
                 let payload = match payload {
                     Some(p) => Some(Box::new(self.expr(p, env)?)),
                     None => None,
                 };
                 match variant.as_str() {
-                    "Some" => Ok(Value::Opt(OptV::Some(Box::new(*payload.unwrap_or(Box::new(Value::Nil)))))),
+                    "Some" => Ok(Value::Opt(OptV::Some(Box::new(
+                        *payload.unwrap_or(Box::new(Value::Nil)),
+                    )))),
                     "None" => Ok(Value::Opt(OptV::None)),
                     "Ok" => Ok(Value::Res(Res::Ok(payload.unwrap_or(Box::new(Value::Nil))))),
-                    "Err" => Ok(Value::Res(Res::Err(payload.unwrap_or(Box::new(Value::Nil))))),
-                    _ => Ok(Value::Enum { ty: ty.clone(), variant: variant.clone(), payload }),
+                    "Err" => Ok(Value::Res(Res::Err(
+                        payload.unwrap_or(Box::new(Value::Nil)),
+                    ))),
+                    _ => Ok(Value::Enum {
+                        ty: ty.clone(),
+                        variant: variant.clone(),
+                        payload,
+                    }),
                 }
             }
             Expr::Range(l, r) => {
@@ -525,14 +567,21 @@ impl Interp {
                 let e = as_int(&self.expr(r, env)?)?;
                 Ok(Value::Range { start: s, end: e })
             }
-            Expr::Fn { params, arrow, body } => {
+            Expr::Fn {
+                params,
+                arrow,
+                body,
+            } => {
                 let data = Rc::new(ClosureData {
                     params: params.clone(),
                     arrow: arrow.as_ref().map(|b| (**b).clone()),
                     body: body.clone(),
                     env: env.clone(),
                 });
-                Ok(Value::Function(Rc::new(Function { kind: FuncKind::Closure(data), name: None })))
+                Ok(Value::Function(Rc::new(Function {
+                    kind: FuncKind::Closure(data),
+                    name: None,
+                })))
             }
             Expr::Await(inner) => self.expr(inner, env),
             Expr::If { cond, then, alt } => {
@@ -588,8 +637,13 @@ impl Interp {
             Eq => Ok(Value::Bool(values_equal(&lv, &rv))),
             Ne => Ok(Value::Bool(!values_equal(&lv, &rv))),
             Lt | Le | Gt | Ge => {
-                let ord = values_cmp(&lv, &rv)
-                    .ok_or_else(|| rt_err(format!("cannot order `{}` and `{}`", lv.type_name(), rv.type_name())))?;
+                let ord = values_cmp(&lv, &rv).ok_or_else(|| {
+                    rt_err(format!(
+                        "cannot order `{}` and `{}`",
+                        lv.type_name(),
+                        rv.type_name()
+                    ))
+                })?;
                 let b = match op {
                     Lt => ord.is_lt(),
                     Le => ord.is_le(),
@@ -631,7 +685,7 @@ impl Interp {
                     let member = self.read_member(base.clone(), name)?;
                     return self.call_value(&member, args);
                 }
-crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
+                crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
             }
             Value::Struct(s) => {
                 let field = s
@@ -644,19 +698,32 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
                 self.call_value(&field, args)
             }
             Value::Module(m) => {
-                let member = m
-                    .get(name)
-                    .ok_or_else(|| rt_err(format!("module `{}` has no member `{}`", m.name(), name)))?;
+                let member = m.get(name).ok_or_else(|| {
+                    rt_err(format!("module `{}` has no member `{}`", m.name(), name))
+                })?;
                 self.call_value(&member, args)
             }
-            Value::TypeInfo { name: ty, kind: TypeKind::Enum } => {
+            Value::TypeInfo {
+                name: ty,
+                kind: TypeKind::Enum,
+            } => {
                 if args.len() > 1 {
-                    return Err(rt_err(format!("enum variant `{}.{}` takes at most one payload", ty, name)));
+                    return Err(rt_err(format!(
+                        "enum variant `{}.{}` takes at most one payload",
+                        ty, name
+                    )));
                 }
                 let payload = args.into_iter().next().map(|(_, v)| Box::new(v));
-                Ok(Value::Enum { ty: Some(ty.clone()), variant: name.to_string(), payload })
+                Ok(Value::Enum {
+                    ty: Some(ty.clone()),
+                    variant: name.to_string(),
+                    payload,
+                })
             }
-            Value::TypeInfo { name: ty, kind: TypeKind::Struct } => Err(rt_err(format!(
+            Value::TypeInfo {
+                name: ty,
+                kind: TypeKind::Struct,
+            } => Err(rt_err(format!(
                 "`{}` is a struct type; construct values with `{} {{ ... }}`",
                 ty, ty
             ))),
@@ -667,7 +734,9 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
     pub fn call_value(&mut self, callee: &Value, args: Vec<Arg>) -> EResult<Value> {
         match callee {
             Value::Function(f) => match &f.kind {
-                FuncKind::Builtin(name) => crate::builtins::call_builtin(name, self, args).map_err(Abort::Err),
+                FuncKind::Builtin(name) => {
+                    crate::builtins::call_builtin(name, self, args).map_err(Abort::Err)
+                }
                 FuncKind::Closure(c) => self.call_closure(f, c, args),
             },
             Value::Module(m) => {
@@ -687,7 +756,10 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
         c: &Rc<ClosureData>,
         args: Vec<Arg>,
     ) -> EResult<Value> {
-        let scope = Env::new(Some(c.env.clone()), Some(f.name.as_deref().unwrap_or("<anon>").to_string()));
+        let scope = Env::new(
+            Some(c.env.clone()),
+            Some(f.name.as_deref().unwrap_or("<anon>").to_string()),
+        );
 
         let mut positional = Vec::new();
         let mut named: HashMap<String, Value> = HashMap::new();
@@ -725,7 +797,10 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
         }
         if let Some(extra) = named.keys().next() {
             let name = f.name.as_deref().unwrap_or("<anonymous>");
-            return Err(rt_err(format!("unknown argument `{}` in call to `{}`", extra, name)));
+            return Err(rt_err(format!(
+                "unknown argument `{}` in call to `{}`",
+                extra, name
+            )));
         }
 
         if let Some(arrow) = &c.arrow {
@@ -757,7 +832,9 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
                 }
                 match name {
                     "keys" => Ok(Value::Array(Rc::new(RefCell::new(
-                        m.iter().map(|(k, _)| Value::Str(Rc::from(k.as_str()))).collect(),
+                        m.iter()
+                            .map(|(k, _)| Value::Str(Rc::from(k.as_str())))
+                            .collect(),
                     )))),
                     "values" => Ok(Value::Array(Rc::new(RefCell::new(
                         m.iter().map(|(_, v)| v.clone()).collect(),
@@ -788,7 +865,10 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
                 "path" => Ok(Value::Str(Rc::from(f.borrow().path.as_str()))),
                 "name" => {
                     let p = f.borrow().path.clone();
-                    let n = Path::new(&p).file_name().map(|s| s.to_string_lossy().to_string()).unwrap_or(p);
+                    let n = Path::new(&p)
+                        .file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or(p);
                     Ok(Value::Str(Rc::from(n.as_str())))
                 }
                 _ => Err(rt_err(format!("File has no member `{}`", name))),
@@ -829,16 +909,26 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
                 },
                 _ => Err(rt_err(format!("Result has no member `{}`", name))),
             },
-            Value::TypeInfo { name: ty, kind: TypeKind::Enum } => Ok(Value::Enum {
+            Value::TypeInfo {
+                name: ty,
+                kind: TypeKind::Enum,
+            } => Ok(Value::Enum {
                 ty: Some(ty.clone()),
                 variant: name.to_string(),
                 payload: None,
             }),
-            Value::TypeInfo { name: ty, kind: TypeKind::Struct } => Err(rt_err(format!(
+            Value::TypeInfo {
+                name: ty,
+                kind: TypeKind::Struct,
+            } => Err(rt_err(format!(
                 "`{}` is a struct type; it has no member `{}`",
                 ty, name
             ))),
-            other => Err(rt_err(format!("`{}` has no member `{}`", other.type_name(), name))),
+            other => Err(rt_err(format!(
+                "`{}` has no member `{}`",
+                other.type_name(),
+                name
+            ))),
         }
     }
 
@@ -848,7 +938,11 @@ crate::builtins::call_method(&base, name, self, args).map_err(Abort::Err)
                 let i = as_int(&index)?;
                 let a = a.borrow();
                 if i < 0 || i as usize >= a.len() {
-                    return Err(rt_err(format!("array index {} out of bounds (len {})", i, a.len())));
+                    return Err(rt_err(format!(
+                        "array index {} out of bounds (len {})",
+                        i,
+                        a.len()
+                    )));
                 }
                 Ok(a[i as usize].clone())
             }
@@ -927,7 +1021,11 @@ fn try_match(pat: &Pattern, value: &Value) -> Option<Vec<(String, Value)>> {
                 _ => None,
             },
             other => match value {
-                Value::Enum { ty: vty, variant, payload } => {
+                Value::Enum {
+                    ty: vty,
+                    variant,
+                    payload,
+                } => {
                     if variant != other {
                         return None;
                     }
@@ -960,7 +1058,10 @@ fn bind_inner(inner: &Option<Box<Pattern>>, value: &Value) -> Option<Vec<(String
 fn as_int(v: &Value) -> EResult<i64> {
     match v {
         Value::Int(i) => Ok(*i),
-        other => Err(rt_err(format!("expected an integer index, found `{}`", other.type_name()))),
+        other => Err(rt_err(format!(
+            "expected an integer index, found `{}`",
+            other.type_name()
+        ))),
     }
 }
 
@@ -993,6 +1094,10 @@ fn add_values(l: &Value, r: &Value) -> EResult<Value> {
         (Value::Int(a), Value::Float(b)) => Ok(Value::Float(*a as f64 + b)),
         (Value::Float(a), Value::Int(b)) => Ok(Value::Float(a + *b as f64)),
         (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a + b)),
-        _ => Ok(Value::Str(Rc::from(format!("{}{}", display(l), display(r))))),
+        _ => Ok(Value::Str(Rc::from(format!(
+            "{}{}",
+            display(l),
+            display(r)
+        )))),
     }
 }

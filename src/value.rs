@@ -18,15 +18,25 @@ pub enum Value {
     Array(Rc<RefCell<Vec<Value>>>),
     Map(Rc<RefCell<Vec<(String, Value)>>>),
     Struct(Rc<RefCell<StructData>>),
-    Enum { ty: Option<String>, variant: String, payload: Option<Box<Value>> },
+    Enum {
+        ty: Option<String>,
+        variant: String,
+        payload: Option<Box<Value>>,
+    },
     Opt(OptV),
     Res(Res),
-    Range { start: i64, end: i64 },
+    Range {
+        start: i64,
+        end: i64,
+    },
     Function(Rc<Function>),
     Module(Rc<Env>),
     File(Rc<RefCell<UsglFile>>),
     ProcResult(Rc<ProcResult>),
-    TypeInfo { name: String, kind: TypeKind },
+    TypeInfo {
+        name: String,
+        kind: TypeKind,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -176,7 +186,11 @@ pub fn display(v: &Value) -> String {
             out.push('}');
             out
         }
-        Value::Enum { ty, variant, payload } => {
+        Value::Enum {
+            ty,
+            variant,
+            payload,
+        } => {
             let mut out = String::new();
             if let Some(t) = ty {
                 out.push_str(t);
@@ -299,14 +313,30 @@ pub fn values_equal(a: &Value, b: &Value) -> bool {
             let (x, y) = (x.borrow(), y.borrow());
             x.name == y.name
                 && x.fields.len() == y.fields.len()
-                && x.fields
-                    .iter()
-                    .all(|(k, v)| y.fields.iter().any(|(k2, v2)| k == k2 && values_equal(v, v2)))
+                && x.fields.iter().all(|(k, v)| {
+                    y.fields
+                        .iter()
+                        .any(|(k2, v2)| k == k2 && values_equal(v, v2))
+                })
         }
-        (Enum { ty: t1, variant: v1, payload: p1 }, Enum { ty: t2, variant: v2, payload: p2 }) => {
+        (
+            Enum {
+                ty: t1,
+                variant: v1,
+                payload: p1,
+            },
+            Enum {
+                ty: t2,
+                variant: v2,
+                payload: p2,
+            },
+        ) => {
             t1 == t2
                 && v1 == v2
-                && p1.as_ref().zip(p2.as_ref()).map_or(true, |(a, b)| values_equal(a, b))
+                && p1
+                    .as_ref()
+                    .zip(p2.as_ref())
+                    .map_or(true, |(a, b)| values_equal(a, b))
         }
         (Opt(o1), Opt(o2)) => match (o1, o2) {
             (OptV::None, OptV::None) => true,

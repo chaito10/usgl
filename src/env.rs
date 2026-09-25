@@ -44,24 +44,41 @@ impl Env {
 
     pub fn define(&self, name: &str, value: Value, mutable: bool) -> RtResult<()> {
         let mut vars = self.vars.borrow_mut();
-        let is_builtin = vars.get(name).map(|s| match &s.value {
+        let is_builtin = vars
+            .get(name)
+            .map(|s| match &s.value {
                 Value::Function(f) => matches!(f.kind, FuncKind::Builtin(_)),
                 Value::Module(_) => true,
                 _ => false,
-            }).unwrap_or(false);
+            })
+            .unwrap_or(false);
         if vars.contains_key(name) && !self.allow_redefine.get() && !is_builtin {
             return Err(UsglError::rt(
                 format!("`{}` is already defined in this scope", name),
                 None,
             ));
         }
-        vars.insert(name.to_string(), Slot { value, mutable, moved: false });
+        vars.insert(
+            name.to_string(),
+            Slot {
+                value,
+                mutable,
+                moved: false,
+            },
+        );
         Ok(())
     }
 
     pub fn define_anyway(&self, name: &str, value: Value, mutable: bool) {
         let mut vars = self.vars.borrow_mut();
-        vars.insert(name.to_string(), Slot { value, mutable, moved: false });
+        vars.insert(
+            name.to_string(),
+            Slot {
+                value,
+                mutable,
+                moved: false,
+            },
+        );
     }
 
     pub fn has_current(&self, name: &str) -> bool {
@@ -72,7 +89,11 @@ impl Env {
         let mut e: &Env = self;
         loop {
             if let Some(slot) = e.vars.borrow().get(name) {
-                return if slot.moved { None } else { Some(slot.value.clone()) };
+                return if slot.moved {
+                    None
+                } else {
+                    Some(slot.value.clone())
+                };
             }
             match &e.parent {
                 Some(p) => e = p,
@@ -111,9 +132,7 @@ impl Env {
             }
             match &e.parent {
                 Some(p) => e = p,
-                None => {
-                    return Err(UsglError::rt(format!("unknown variable `{}`", name), None))
-                }
+                None => return Err(UsglError::rt(format!("unknown variable `{}`", name), None)),
             }
         }
     }
@@ -135,6 +154,10 @@ impl Env {
     }
 
     pub fn bindings(&self) -> Vec<(String, Value)> {
-        self.vars.borrow().iter().map(|(k, s)| (k.clone(), s.value.clone())).collect()
+        self.vars
+            .borrow()
+            .iter()
+            .map(|(k, s)| (k.clone(), s.value.clone()))
+            .collect()
     }
 }

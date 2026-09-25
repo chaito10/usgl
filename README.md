@@ -2,9 +2,14 @@
 
 A from-scratch implementation of the USGL language described in
 [`rfc.md`](rfc.md). This repository is **Phase 1**: a dependency-free
-interpreter written in Rust with a `us` command-line interface.
+interpreter written in Rust with a `us` command-line interface,
+CI-tested and cross-released for Linux, macOS, Windows, Android, iOS,
+and the web (WASM).
 
 > No external crates. Only the standard library is used.
+
+[![CI](https://github.com/chaito10/usgl/actions/workflows/ci.yml/badge.svg)](https://github.com/chaito10/usgl/actions/workflows/ci.yml)
+[![Release](https://github.com/chaito10/usgl/actions/workflows/release.yml/badge.svg)](https://github.com/chaito10/usgl/actions/workflows/release.yml)
 
 ```
 ┌──────────────┐   lexer    ┌─────────┐   parser   ┌──────┐   eval    ┌──────────┐
@@ -87,6 +92,9 @@ test "fibonacci" {
 ## Project layout
 
 ```
+.github/workflows/
+  ci.yml        fmt check + tests (ubuntu/windows/macos) + wasm smoke
+  release.yml   16-target cross-build matrix + GitHub release
 src/
   lexer.rs     tokenization (newline-significant)
   parser.rs    recursive-descent → AST
@@ -102,6 +110,44 @@ src/
   main.rs      `us` CLI
 tests/usgl.rs  integration tests (lib API)
 examples/     runnable scripts + test suites
+www/          in-browser WASI demo (runs the real us.wasm)
+```
+
+## CI / release matrix
+
+`.github/workflows/ci.yml` runs on every push/PR: `cargo fmt --check`, a release
+test suite on ubuntu/windows/macos, and a WASI build smoked under `wasmtime`.
+
+`.github/workflows/release.yml` builds every target below and publishes them to a
+GitHub Release when a `v*` tag is pushed (or on `workflow_dispatch`):
+
+| Platform | Targets (arch) | Built with |
+| --- | --- | --- |
+| Linux | x86_64, i686, aarch64, arm, armv7, riscv64 | `cross` (GNU) |
+| Windows | x86_64, i686, aarch64 | `cargo-xwin` (MSVC `.exe`) |
+| macOS | x86_64, aarch64, **universal2** | native macOS runner + `lipo` |
+| Android | aarch64, armv7, i686, x86_64 | `cross` (NDK images) |
+| iOS | aarch64 (device), x86_64 + arm64 (sim) | native macOS runner |
+| Web | `us.wasm` (WASI), `us-bare.wasm` | `cargo build --target wasm32-*` |
+
+The release job also attaches `SHA256SUMS.txt` and the `www/` browser bundle.
+
+## Running in a browser
+
+The `www/` demo loads `us.wasm` (the WASI build) and runs it with
+`@wasmer/wasi` — same binary as the CLI. After a release it is served from the
+release assets; locally you can reproduce it with:
+
+```sh
+cargo build --release --target wasm32-wasip1
+cp target/wasm32-wasip1/release/us.wasm www/us.wasm
+python -m http.server 8000 --directory www   # open http://localhost:8000
+```
+
+Or run the wasm headlessly:
+
+```sh
+bash$ wasmtime run us.wasm my_script.us
 ```
 
 ## Phase 2 (planned)

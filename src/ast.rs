@@ -14,22 +14,61 @@ pub struct Stmt {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum StmtKind {
-    Let { name: String, mutable: bool, ty: Option<Type>, value: Expr },
+    Let {
+        name: String,
+        mutable: bool,
+        ty: Option<Type>,
+        value: Expr,
+    },
     Expr(Expr),
-    Fn { name: String, params: Vec<Param>, ret: Option<Type>, body: Vec<Stmt>, is_async: bool },
+    Fn {
+        name: String,
+        params: Vec<Param>,
+        ret: Option<Type>,
+        body: Vec<Stmt>,
+        is_async: bool,
+    },
     Return(Option<Expr>),
-    If { cond: Expr, then: Vec<Stmt>, alt: Vec<Stmt> },
-    While { cond: Expr, body: Vec<Stmt> },
-    For { name: String, iter: Expr, body: Vec<Stmt> },
-    Loop { body: Vec<Stmt> },
-    Match { expr: Expr, arms: Vec<Arm> },
-    Struct { name: String, fields: Vec<(String, Type)> },
-    Enum { name: String, variants: Vec<(String, Option<Type>)> },
+    If {
+        cond: Expr,
+        then: Vec<Stmt>,
+        alt: Vec<Stmt>,
+    },
+    While {
+        cond: Expr,
+        body: Vec<Stmt>,
+    },
+    For {
+        name: String,
+        iter: Expr,
+        body: Vec<Stmt>,
+    },
+    Loop {
+        body: Vec<Stmt>,
+    },
+    Match {
+        expr: Expr,
+        arms: Vec<Arm>,
+    },
+    Struct {
+        name: String,
+        fields: Vec<(String, Type)>,
+    },
+    Enum {
+        name: String,
+        variants: Vec<(String, Option<Type>)>,
+    },
     Import(Vec<String>),
-    Test { name: String, body: Vec<Stmt> },
+    Test {
+        name: String,
+        body: Vec<Stmt>,
+    },
     Break,
     Continue,
-    Block { body: Vec<Stmt>, unsafe_block: bool },
+    Block {
+        body: Vec<Stmt>,
+        unsafe_block: bool,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -49,7 +88,11 @@ pub enum Pattern {
     Wild,
     Lit(LitVal),
     Bind(String),
-    Variant { ty: Option<String>, name: String, inner: Option<Box<Pattern>> },
+    Variant {
+        ty: Option<String>,
+        name: String,
+        inner: Option<Box<Pattern>>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -72,7 +115,13 @@ pub struct Type {
 
 impl Type {
     pub fn name(n: &str) -> Self {
-        Type { is_ref: false, is_mut: false, is_ptr: false, base: n.to_string(), generics: Vec::new() }
+        Type {
+            is_ref: false,
+            is_mut: false,
+            is_ptr: false,
+            base: n.to_string(),
+            generics: Vec::new(),
+        }
     }
 }
 
@@ -84,20 +133,55 @@ pub enum Expr {
     Char(char),
     Bool(bool),
     Ident(String),
-    Unary { op: char, e: Box<Expr> },
-    Binary { op: BinOp, l: Box<Expr>, r: Box<Expr> },
-    Assign { target: Box<Expr>, value: Box<Expr> },
-    Call { callee: Box<Expr>, generics: Vec<Type>, args: Vec<Arg> },
-    Member { base: Box<Expr>, name: String },
-    Index { base: Box<Expr>, index: Box<Expr> },
+    Unary {
+        op: char,
+        e: Box<Expr>,
+    },
+    Binary {
+        op: BinOp,
+        l: Box<Expr>,
+        r: Box<Expr>,
+    },
+    Assign {
+        target: Box<Expr>,
+        value: Box<Expr>,
+    },
+    Call {
+        callee: Box<Expr>,
+        generics: Vec<Type>,
+        args: Vec<Arg>,
+    },
+    Member {
+        base: Box<Expr>,
+        name: String,
+    },
+    Index {
+        base: Box<Expr>,
+        index: Box<Expr>,
+    },
     ErrProp(Box<Expr>),
     Array(Vec<Expr>),
     Map(Vec<(String, Expr)>),
-    StructLit { ty: String, fields: Vec<(String, Expr)> },
-    Ctor { ty: Option<String>, variant: String, payload: Option<Box<Expr>> },
+    StructLit {
+        ty: String,
+        fields: Vec<(String, Expr)>,
+    },
+    Ctor {
+        ty: Option<String>,
+        variant: String,
+        payload: Option<Box<Expr>>,
+    },
     Range(Box<Expr>, Box<Expr>),
-    Fn { params: Vec<Param>, arrow: Option<Box<Expr>>, body: Vec<Stmt> },
-    If { cond: Box<Expr>, then: Vec<Stmt>, alt: Vec<Stmt> },
+    Fn {
+        params: Vec<Param>,
+        arrow: Option<Box<Expr>>,
+        body: Vec<Stmt>,
+    },
+    If {
+        cond: Box<Expr>,
+        then: Vec<Stmt>,
+        alt: Vec<Stmt>,
+    },
     Await(Box<Expr>),
 }
 
@@ -189,5 +273,8 @@ fn collect_tests_stmt(stmt: &Stmt, out: &mut Vec<(String, Vec<Stmt>, usize)>, de
 
 /// Find a top-level `fn main`.
 pub fn find_main(program: &Program) -> Option<&Stmt> {
-    program.stmts.iter().find(|s| matches!(&s.kind, StmtKind::Fn { name, .. } if name == "main"))
+    program
+        .stmts
+        .iter()
+        .find(|s| matches!(&s.kind, StmtKind::Fn { name, .. } if name == "main"))
 }

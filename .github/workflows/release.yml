@@ -1,0 +1,216 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ------------------------------------------------------------------
+  # Linux: x86_64, i686 (32-bit x86), aarch64 (arm64), arm, armv7,
+  # riscv64 — via `cross` docker images so no host toolchain is needed.
+  # ------------------------------------------------------------------
+  build-linux:
+    name: linux (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - arm-unknown-linux-gnueabihf
+          - armv7-unknown-linux-gnueabihf
+          - riscv64gc-unknown-linux-gnu
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: taiki-e/install-action@cross
+      - name: Build (release)
+        run: cross build --release --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/us "dist/us-${{ matrix.target }}"
+          tar -C dist -czf "us-${{ matrix.target }}.tar.gz" "us-${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.target }}
+          path: us-${{ matrix.target }}.tar.gz
+
+  # ------------------------------------------------------------------
+  # Windows: x86_64, i686, aarch64 (all MSVC, via cargo-xwin on Linux).
+  # ------------------------------------------------------------------
+  build-windows:
+    name: windows (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-pc-windows-msvc
+          - i686-pc-windows-msvc
+          - aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: taiki-e/install-action@cargo-xwin
+      - name: Build (release)
+        run: cargo xwin build --release --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/us.exe" "dist/us-${{ matrix.target }}.exe"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-${{ matrix.target }}
+          path: dist/us-*.exe
+
+  # ------------------------------------------------------------------
+  # macOS: universal2 (x86_64 + aarch64) plus iOS device + simulator.
+  # ------------------------------------------------------------------
+  build-macos:
+    name: macos (+ ios)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin, aarch64-apple-darwin, aarch64-apple-ios, x86_64-apple-ios, aarch64-apple-ios-sim
+      - name: Build darwin x86_64
+        run: cargo build --release --target x86_64-apple-darwin
+      - name: Build darwin aarch64
+        run: cargo build --release --target aarch64-apple-darwin
+      - name: Build iOS (device + simulator)
+        run: |
+          cargo build --release --target aarch64-apple-ios
+          cargo build --release --target x86_64-apple-ios
+          cargo build --release --target aarch64-apple-ios-sim
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          lipo -create -output dist/us-universal-apple-darwin \
+            target/x86_64-apple-darwin/release/us \
+            target/aarch64-apple-darwin/release/us
+          cp target/aarch64-apple-darwin/release/us dist/us-aarch64-apple-darwin
+          cp target/x86_64-apple-darwin/release/us dist/us-x86_64-apple-darwin
+          cp target/aarch64-apple-ios/release/us dist/us-aarch64-apple-ios
+          cp target/x86_64-apple-ios/release/us dist/us-x86_64-apple-ios
+          cp target/aarch64-apple-ios-sim/release/us dist/us-aarch64-apple-ios-sim
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # Android: armv7 (armeabi-v7a), aarch64 (arm64-v8a), i686 (x86),
+  # x86_64 — via `cross` + the NDK-backed docker images.
+  # ------------------------------------------------------------------
+  build-android:
+    name: android (${{ matrix.target }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-linux-android
+          - armv7-linux-androideabi
+          - i686-linux-android
+          - x86_64-linux-android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cross
+      - name: Build (release)
+        run: cross build --release --target ${{ matrix.target }}
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/us" "dist/us-${{ matrix.target }}"
+          ls -la dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ matrix.target }}
+          path: dist/us-*
+
+  # ------------------------------------------------------------------
+  # Web: WASI build runs in Wasmtime (and in browsers via www/) and a
+  # plain wasm32-unknown-unknown build is published as a raw artifact.
+  # ------------------------------------------------------------------
+  build-web:
+    name: web (wasm)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1, wasm32-unknown-unknown
+      - name: Build wasip1
+        run: cargo build --release --target wasm32-wasip1
+      - name: Build wasm32-unknown-unknown
+        run: cargo build --release --target wasm32-unknown-unknown
+      - uses: taiki-e/install-action@wasmtime
+      - name: Smoke test under wasmtime
+        shell: bash
+        run: |
+          printf 'println("browser-ready")\n' > /tmp/w.us
+          wasmtime run --dir /tmp target/wasm32-wasip1/release/us.wasm /tmp/w.us
+      - name: Package + browser bundle
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/wasm32-wasip1/release/us.wasm dist/us.wasm
+          cp target/wasm32-unknown-unknown/release/us.wasm dist/us-bare.wasm
+          mkdir -p dist/www
+          cp -r www/. dist/www/
+          cp target/wasm32-wasip1/release/us.wasm dist/www/us.wasm
+          ls -R dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: dist/*
+
+  # ------------------------------------------------------------------
+  # Assemble all platform artifacts into a GitHub release (tag v*).
+  # ------------------------------------------------------------------
+  release:
+    name: publish release
+    needs: [build-linux, build-windows, build-macos, build-android, build-web]
+    runs-on: ubuntu-24.04
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Archive browser bundle + checksums
+        shell: bash
+        run: |
+          cd dist
+          if [ -d www ]; then
+            tar -czf us-web-bundle.tar.gz www
+            rm -rf www
+          fi
+          sha256sum * > SHA256SUMS.txt
+          ls -la
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true

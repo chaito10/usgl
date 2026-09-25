@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>USGL — browser demo</title>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0 auto;
+      max-width: 860px;
+      padding: 2rem 1rem;
+      font: 15px/1.5 ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+      background: #0e1117;
+      color: #c9d1d9;
+    }
+    h1 { font-size: 1.4rem; color: #f0f6fc; }
+    a { color: #58a6ff; }
+    textarea {
+      width: 100%;
+      height: 300px;
+      box-sizing: border-box;
+      background: #161b22;
+      color: #e6edf3;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+      font: inherit;
+      resize: vertical;
+    }
+    button {
+      background: #238636;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 22px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { background: #2ea043; }
+    pre {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 12px;
+      min-height: 40px;
+      white-space: pre-wrap;
+    }
+    .muted { color: #8b949e; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <h1>USGL in your browser</h1>
+  <p class="muted">
+    This runs the real <code>us.wasm</code> (WASI, compiled from this repo) with
+    <a href="https://www.npmjs.com/package/@wasmer/wasi">@wasmer/wasi</a>. No interpreter is emulated in JS —
+    the exact same binary ships to desktop and mobile.
+  </p>
+  <textarea id="src" spellcheck="false">enum Status { Pending, Running, Complete, Failed(string) }
+let st = Status.Failed("boom")
+match st {
+    Status.Pending => println("pending")
+    Status.Failed(msg) => println("failed: " + msg)
+    _ => println("other")
+}
+let names = users |> map(fn(u) => u.upper())
+println("names: " + str(names))
+println("sum: " + str([1, 2, 3, 4] |> filter(fn(x) => x % 2 == 0) |> map(fn(x) => x * 10)))
+</textarea>
+  <p>
+    <button id="run">Run</button>
+  </p>
+  <pre id="out"></pre>
+  <script src="https://cdn.jsdelivr.net/npm/@wasmer/wasi@1/index.umd.js"></script>
+  <script>
+    const outEl = document.getElementById('out');
+    const srcEl = document.getElementById('src');
+    const realLog = console.log;
+
+    const SAMPLE = `struct User { id: int, name: string }
+let users = [User { id: 1, name: "ada" }, User { id: 2, name: "linus" }]
+let names = users |> map(fn(u) => u.name)
+println("names: " + str(names))
+println("sum: " + str([1, 2, 3, 4] |> filter(fn(x) => x % 2 == 0) |> map(fn(x) => x * 10)))`;
+
+    async function runUs() {
+      outEl.textContent = 'running…';
+      try {
+        const bytes = await (await fetch('us.wasm')).arrayBuffer();
+        const WasmerWasiNS = window.WasmerWasi;
+        if (!WasmerWasiNS || !WasmerWasiNS.WASI) {
+          throw new Error('@wasmer/wasi failed to load; is the CDN reachable?');
+        }
+        const wasi = new WasmerWasiNS.WASI({
+          args: ['us', '/main.us'],
+          env: {},
+          fs: { '/main.us': srcEl.value },
+        });
+        const lines = [];
+        console.log = (...a) => lines.push(a.join(' '));
+        const { instance } = await WebAssembly.instantiate(bytes, wasi.getImports());
+        if (typeof wasi.start === 'function') {
+          wasi.start(instance);
+        } else {
+          wasi.initialize(instance);
+          instance.exports._start();
+        }
+        console.log = realLog;
+        outEl.textContent = lines.length ? lines.join('\n') : '(no output)';
+      } catch (e) {
+        console.log = realLog;
+        outEl.textContent = 'error: ' + e;
+      }
+    }
+
+    document.getElementById('run').addEventListener('click', runUs);
+    runUs();
+  </script>
+</body>
+</html>

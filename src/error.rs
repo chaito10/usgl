@@ -10,7 +10,11 @@ pub struct Span {
 
 impl Span {
     pub fn new(file: &str, line: u32, col: u32) -> Self {
-        Span { file: file.to_string(), line, col }
+        Span {
+            file: file.to_string(),
+            line,
+            col,
+        }
     }
 }
 
@@ -23,22 +27,40 @@ impl fmt::Display for Span {
 /// Every error produced by the toolchain.
 #[derive(Debug, Clone)]
 pub enum UsglError {
-    Lex { message: String, span: Span },
-    Parse { message: String, span: Span },
-    Runtime { message: String, span: Option<Span> },
+    Lex {
+        message: String,
+        span: Span,
+    },
+    Parse {
+        message: String,
+        span: Span,
+    },
+    Runtime {
+        message: String,
+        span: Option<Span>,
+    },
     /// Requested process exit (os.exit).
     Exit(i32),
 }
 
 impl UsglError {
     pub fn lex(msg: impl Into<String>, span: Span) -> Self {
-        UsglError::Lex { message: msg.into(), span }
+        UsglError::Lex {
+            message: msg.into(),
+            span,
+        }
     }
     pub fn parse(msg: impl Into<String>, span: Span) -> Self {
-        UsglError::Parse { message: msg.into(), span }
+        UsglError::Parse {
+            message: msg.into(),
+            span,
+        }
     }
     pub fn rt(msg: impl Into<String>, span: Option<Span>) -> Self {
-        UsglError::Runtime { message: msg.into(), span }
+        UsglError::Runtime {
+            message: msg.into(),
+            span,
+        }
     }
 }
 

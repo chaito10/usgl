@@ -76,7 +76,10 @@ impl<'a> P<'a> {
             self.pos += lit.len();
             Ok(())
         } else {
-            Err(format!("invalid literal (expected {:?})", String::from_utf8_lossy(lit)))
+            Err(format!(
+                "invalid literal (expected {:?})",
+                String::from_utf8_lossy(lit)
+            ))
         }
     }
 
@@ -177,9 +180,7 @@ impl<'a> P<'a> {
             match c {
                 b'"' => return Ok(out),
                 b'\\' => {
-                    let e = self
-                        .peek()
-                        .ok_or("unterminated escape")?;
+                    let e = self.peek().ok_or("unterminated escape")?;
                     self.pos += 1;
                     match e {
                         b'"' => out.push('"'),
@@ -262,9 +263,7 @@ fn write_value(v: &Value, pretty: bool, ind: &mut isize, out: &mut String) -> Re
                     '\t' => out.push_str("\\t"),
                     '\u{8}' => out.push_str("\\b"),
                     '\u{c}' => out.push_str("\\f"),
-                    c if (c as u32) < 0x20 => {
-                        out.push_str(&format!("\\u{:04x}", c as u32))
-                    }
+                    c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
                     c => out.push(c),
                 }
             }
@@ -335,12 +334,7 @@ fn write_value(v: &Value, pretty: bool, ind: &mut isize, out: &mut String) -> Re
                 out.push_str("null");
             }
         },
-        other => {
-            return Err(format!(
-                "cannot serialize `{}` to JSON",
-                other.type_name()
-            ))
-        }
+        other => return Err(format!("cannot serialize `{}` to JSON", other.type_name())),
     }
     Ok(())
 }

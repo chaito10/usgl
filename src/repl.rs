@@ -128,9 +128,7 @@ fn needs_more(src: &str) -> bool {
                     }
                 }
             }
-            '#' => {
-                while it.next().is_some_and(|c| c != '\n') {}
-            }
+            '#' => while it.next().is_some_and(|c| c != '\n') {},
             '/' => {
                 if it.peek() == Some(&'/') {
                     it.next();

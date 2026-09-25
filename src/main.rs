@@ -228,7 +228,10 @@ fn run_test_file(path: &str) -> (usize, usize) {
     for stmt in &program.stmts {
         decls.push(stmt.clone());
     }
-    let decl_program = usgl::ast::Program { stmts: decls, eof_comments: Vec::new() };
+    let decl_program = usgl::ast::Program {
+        stmts: decls,
+        eof_comments: Vec::new(),
+    };
     if let Err(a) = interp.exec_in_env(&decl_program, &global) {
         eprintln!("{}: setup error: {}", path, usgl::abort_message(&a));
         return (0, tests.len());
@@ -238,7 +241,10 @@ fn run_test_file(path: &str) -> (usize, usize) {
     let mut fail = 0usize;
     for (name, body, depth) in &tests {
         let env = usgl::env::Env::new(Some(global.clone()), Some("<test>".to_string()));
-        let tp = usgl::ast::Program { stmts: body.clone(), eof_comments: Vec::new() };
+        let tp = usgl::ast::Program {
+            stmts: body.clone(),
+            eof_comments: Vec::new(),
+        };
         match interp.exec_in_env(&tp, &env) {
             Ok(_) => {
                 pass += 1;

@@ -31,7 +31,12 @@ fn comments(stmt: &Stmt, ind: usize, out: &mut String) {
 fn stmt(s: &Stmt, ind: usize, out: &mut String) {
     comments(s, ind, out);
     match &s.kind {
-        StmtKind::Let { name, mutable, ty, value } => {
+        StmtKind::Let {
+            name,
+            mutable,
+            ty,
+            value,
+        } => {
             indent(ind, out);
             if *mutable {
                 out.push_str("var ");
@@ -52,7 +57,13 @@ fn stmt(s: &Stmt, ind: usize, out: &mut String) {
             out.push_str(&expr(e, 0));
             out.push('\n');
         }
-        StmtKind::Fn { name, params, ret, body, is_async } => {
+        StmtKind::Fn {
+            name,
+            params,
+            ret,
+            body,
+            is_async,
+        } => {
             indent(ind, out);
             if *is_async {
                 out.push_str("async ");
@@ -135,7 +146,12 @@ fn stmt(s: &Stmt, ind: usize, out: &mut String) {
             block_stmt(&format!("while {}", expr(cond, 0)), body, ind, out);
         }
         StmtKind::For { name, iter, body } => {
-            block_stmt(&format!("for {} in {}", name, expr(iter, 0)), body, ind, out);
+            block_stmt(
+                &format!("for {} in {}", name, expr(iter, 0)),
+                body,
+                ind,
+                out,
+            );
         }
         StmtKind::Loop { body } => {
             block_stmt("loop", body, ind, out);
@@ -254,7 +270,16 @@ fn render_if_stmt(s: &Stmt, out: &mut String, ind: usize) {
         out.push('}');
         if !alt.is_empty() {
             out.push_str(" else");
-            if alt.len() == 1 && matches!(alt[0].kind, StmtKind::If { cond: _, then: _, alt: _ }) {
+            if alt.len() == 1
+                && matches!(
+                    alt[0].kind,
+                    StmtKind::If {
+                        cond: _,
+                        then: _,
+                        alt: _
+                    }
+                )
+            {
                 out.push(' ');
                 render_if_stmt(&alt[0], out, ind);
             } else {
@@ -429,16 +454,24 @@ fn expr(e: &Expr, min: u8) -> String {
             format!("[{}]", parts.join(", "))
         }
         Expr::Map(fields) => {
-            let parts: Vec<String> =
-                fields.iter().map(|(k, v)| format!("{}: {}", k, expr(v, 0))).collect();
+            let parts: Vec<String> = fields
+                .iter()
+                .map(|(k, v)| format!("{}: {}", k, expr(v, 0)))
+                .collect();
             format!("{{ {} }}", parts.join(", "))
         }
         Expr::StructLit { ty, fields } => {
-            let parts: Vec<String> =
-                fields.iter().map(|(k, v)| format!("{}: {}", k, expr(v, 0))).collect();
+            let parts: Vec<String> = fields
+                .iter()
+                .map(|(k, v)| format!("{}: {}", k, expr(v, 0)))
+                .collect();
             format!("{} {{ {} }}", ty, parts.join(", "))
         }
-        Expr::Ctor { ty, variant, payload } => {
+        Expr::Ctor {
+            ty,
+            variant,
+            payload,
+        } => {
             let mut s = String::new();
             if let Some(t) = ty {
                 s.push_str(t);
@@ -453,7 +486,11 @@ fn expr(e: &Expr, min: u8) -> String {
             s
         }
         Expr::Range(l, r) => format!("{}..{}", expr(l, 1), expr(r, 2)),
-        Expr::Fn { params, arrow, body } => {
+        Expr::Fn {
+            params,
+            arrow,
+            body,
+        } => {
             let mut s = String::from("fn(");
             params_str(params, &mut s);
             s.push(')');
@@ -492,7 +529,16 @@ fn expr(e: &Expr, min: u8) -> String {
             s.push('}');
             if !alt.is_empty() {
                 s.push_str(" else");
-                if alt.len() == 1 && matches!(alt[0].kind, StmtKind::If { cond: _, then: _, alt: _ }) {
+                if alt.len() == 1
+                    && matches!(
+                        alt[0].kind,
+                        StmtKind::If {
+                            cond: _,
+                            then: _,
+                            alt: _
+                        }
+                    )
+                {
                     s.push(' ');
                     render_if_stmt(&alt[0], &mut s, 1);
                 } else {

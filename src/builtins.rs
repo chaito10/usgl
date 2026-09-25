@@ -18,7 +18,9 @@ fn rt_err(msg: impl Into<String>) -> UsglError {
 }
 
 fn positional(args: &[Arg]) -> Vec<Value> {
-    args.iter().filter_map(|(n, v)| if n.is_none() { Some(v.clone()) } else { None }).collect()
+    args.iter()
+        .filter_map(|(n, v)| if n.is_none() { Some(v.clone()) } else { None })
+        .collect()
 }
 
 fn all(args: &[Arg]) -> Vec<Value> {
@@ -26,7 +28,9 @@ fn all(args: &[Arg]) -> Vec<Value> {
 }
 
 fn named<'a>(args: &'a [Arg], key: &str) -> Option<&'a Value> {
-    args.iter().find(|(n, _)| n.as_deref() == Some(key)).map(|(_, v)| v)
+    args.iter()
+        .find(|(n, _)| n.as_deref() == Some(key))
+        .map(|(_, v)| v)
 }
 
 fn one(args: &[Arg], fname: &str) -> RtResult<Value> {
@@ -41,14 +45,20 @@ fn one(args: &[Arg], fname: &str) -> RtResult<Value> {
 fn seed_arg(v: &Value) -> RtResult<String> {
     match v {
         Value::Str(s) => Ok(s.to_string()),
-        _ => Err(rt_err(format!("expected String, found `{}`", v.type_name()))),
+        _ => Err(rt_err(format!(
+            "expected String, found `{}`",
+            v.type_name()
+        ))),
     }
 }
 
 fn int_arg(v: &Value) -> RtResult<i64> {
     match v {
         Value::Int(i) => Ok(*i),
-        _ => Err(rt_err(format!("expected an integer, found `{}`", v.type_name()))),
+        _ => Err(rt_err(format!(
+            "expected an integer, found `{}`",
+            v.type_name()
+        ))),
     }
 }
 
@@ -56,7 +66,10 @@ fn num_arg(v: &Value) -> RtResult<f64> {
     match v {
         Value::Int(i) => Ok(*i as f64),
         Value::Float(f) => Ok(*f),
-        _ => Err(rt_err(format!("expected a number, found `{}`", v.type_name()))),
+        _ => Err(rt_err(format!(
+            "expected a number, found `{}`",
+            v.type_name()
+        ))),
     }
 }
 
@@ -66,27 +79,89 @@ fn num_arg(v: &Value) -> RtResult<f64> {
 
 pub fn install(global: &Rc<Env>, interp: &mut Interp) {
     for name in [
-        "println", "print", "assert", "assert_eq", "shell", "type_of", "str", "len", "map", "filter",
+        "println",
+        "print",
+        "assert",
+        "assert_eq",
+        "shell",
+        "type_of",
+        "str",
+        "len",
+        "map",
+        "filter",
     ] {
         let _ = global.define(name, builtin(name), false);
     }
 
     let mut modules: Vec<(&str, Vec<&'static str>)> = Vec::new();
-    modules.push(("fs", vec!["fs.read", "fs.write", "fs.append", "fs.exists", "fs.list", "fs.directories", "fs.glob", "fs.open", "fs.remove", "fs.mkdir"]));
+    modules.push((
+        "fs",
+        vec![
+            "fs.read",
+            "fs.write",
+            "fs.append",
+            "fs.exists",
+            "fs.list",
+            "fs.directories",
+            "fs.glob",
+            "fs.open",
+            "fs.remove",
+            "fs.mkdir",
+        ],
+    ));
     modules.push(("json", vec!["json.parse", "json.stringify"]));
-    modules.push(("math", vec![
-        "math.sqrt", "math.cbrt", "math.abs", "math.floor", "math.ceil", "math.round", "math.trunc",
-        "math.pow", "math.min", "math.max", "math.sin", "math.cos", "math.tan", "math.asin",
-        "math.acos", "math.atan", "math.log", "math.log2", "math.log10", "math.exp", "math.pi",
-    ]));
-    modules.push(("strings", vec![
-        "strings.upper", "strings.lower", "strings.trim", "strings.trim_start", "strings.trim_end",
-        "strings.reverse", "strings.repeat", "strings.replace", "strings.starts_with", "strings.ends_with",
-        "strings.contains", "strings.char_at", "strings.length", "strings.split", "strings.join",
-        "strings.chars",
-    ]));
+    modules.push((
+        "math",
+        vec![
+            "math.sqrt",
+            "math.cbrt",
+            "math.abs",
+            "math.floor",
+            "math.ceil",
+            "math.round",
+            "math.trunc",
+            "math.pow",
+            "math.min",
+            "math.max",
+            "math.sin",
+            "math.cos",
+            "math.tan",
+            "math.asin",
+            "math.acos",
+            "math.atan",
+            "math.log",
+            "math.log2",
+            "math.log10",
+            "math.exp",
+            "math.pi",
+        ],
+    ));
+    modules.push((
+        "strings",
+        vec![
+            "strings.upper",
+            "strings.lower",
+            "strings.trim",
+            "strings.trim_start",
+            "strings.trim_end",
+            "strings.reverse",
+            "strings.repeat",
+            "strings.replace",
+            "strings.starts_with",
+            "strings.ends_with",
+            "strings.contains",
+            "strings.char_at",
+            "strings.length",
+            "strings.split",
+            "strings.join",
+            "strings.chars",
+        ],
+    ));
     modules.push(("time", vec!["time.sleep", "time.millis", "time.now"]));
-    modules.push(("os", vec!["os.name", "os.env", "os.args", "os.cwd", "os.exit"]));
+    modules.push((
+        "os",
+        vec!["os.name", "os.env", "os.args", "os.cwd", "os.exit"],
+    ));
     modules.push(("process", vec!["process.run", "process.shell"]));
     modules.push(("Buffer", vec!["Buffer.new"]));
     modules.push(("Bytes", vec!["Bytes.new"]));
@@ -94,7 +169,11 @@ pub fn install(global: &Rc<Env>, interp: &mut Interp) {
     for (mname, fns) in modules {
         let env = Env::new(None, Some(mname.to_string()));
         for f in fns {
-            let _ = env.define(f.strip_prefix(mname).unwrap().trim_start_matches('.'), builtin(f), false);
+            let _ = env.define(
+                f.strip_prefix(mname).unwrap().trim_start_matches('.'),
+                builtin(f),
+                false,
+            );
         }
         interp.modules.insert(mname.to_string(), env.clone());
         // Bind the module itself so `fs.list(...)` works without an import,
@@ -125,7 +204,11 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
                 return Err(rt_err("assert expects a condition"));
             }
             if !p[0].is_truthy() {
-                let msg = if p.len() > 1 { display(&p[1]) } else { "assertion failed".into() };
+                let msg = if p.len() > 1 {
+                    display(&p[1])
+                } else {
+                    "assertion failed".into()
+                };
                 return Err(rt_err(msg));
             }
             Ok(Value::Nil)
@@ -165,7 +248,12 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
                 Value::Array(a) => a.borrow().len() as i64,
                 Value::Map(m) => m.borrow().len() as i64,
                 Value::Bytes(b) => b.len() as i64,
-                _ => return Err(rt_err(format!("`len` does not apply to `{}`", v.type_name()))),
+                _ => {
+                    return Err(rt_err(format!(
+                        "`len` does not apply to `{}`",
+                        v.type_name()
+                    )))
+                }
             };
             Ok(Value::Int(n))
         }
@@ -189,7 +277,9 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
             let p = positional(&args);
             let path = seed_arg(p.first().ok_or_else(|| rt_err("fs.read(path)"))?)?;
             match std::fs::read_to_string(&path) {
-                Ok(s) => Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(s.as_str())))))),
+                Ok(s) => Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(
+                    s.as_str(),
+                )))))),
                 Err(e) => Ok(err_result(format!("fs.read({:?}): {}", path, e))),
             }
         }
@@ -213,7 +303,11 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
             let path = seed_arg(&p[0])?;
             let content = display(&p[1]);
             use std::io::Write;
-            let r = std::fs::OpenOptions::new().create(true).append(true).open(&path).and_then(|mut f| f.write_all(content.as_bytes()));
+            let r = std::fs::OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&path)
+                .and_then(|mut f| f.write_all(content.as_bytes()));
             match r {
                 Ok(()) => Ok(ok_result(Value::Nil)),
                 Err(e) => Ok(err_result(format!("fs.append({:?}): {}", path, e))),
@@ -226,7 +320,8 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         "fs.list" => {
             let dir = seed_arg(&one(&args, "fs.list")?)?;
             let mut names: Vec<String> = Vec::new();
-            let entries = std::fs::read_dir(&dir).map_err(|e| rt_err(format!("fs.list({:?}): {}", dir, e)))?;
+            let entries = std::fs::read_dir(&dir)
+                .map_err(|e| rt_err(format!("fs.list({:?}): {}", dir, e)))?;
             for en in entries {
                 let en = en.map_err(|e| rt_err(format!("fs.list({:?}): {}", dir, e)))?;
                 names.push(en.file_name().to_string_lossy().to_string());
@@ -238,7 +333,8 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         "fs.directories" => {
             let dir = seed_arg(&one(&args, "fs.directories")?)?;
             let mut names: Vec<String> = Vec::new();
-            let entries = std::fs::read_dir(&dir).map_err(|e| rt_err(format!("fs.directories({:?}): {}", dir, e)))?;
+            let entries = std::fs::read_dir(&dir)
+                .map_err(|e| rt_err(format!("fs.directories({:?}): {}", dir, e)))?;
             for en in entries {
                 let en = en.map_err(|e| rt_err(format!("fs.directories({:?}): {}", dir, e)))?;
                 if en.file_type().map(|t| t.is_dir()).unwrap_or(false) {
@@ -253,7 +349,8 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
             let pat = seed_arg(&one(&args, "fs.glob")?)?;
             let (dir, fpat) = split_glob(&pat);
             let mut matches: Vec<String> = Vec::new();
-            let entries = std::fs::read_dir(&dir).map_err(|e| rt_err(format!("fs.glob({:?}): {}", pat, e)))?;
+            let entries = std::fs::read_dir(&dir)
+                .map_err(|e| rt_err(format!("fs.glob({:?}): {}", pat, e)))?;
             for en in entries {
                 let en = en.map_err(|e| rt_err(format!("fs.glob({:?}): {}", pat, e)))?;
                 let name = en.file_name().to_string_lossy().to_string();
@@ -264,7 +361,10 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
                 }
             }
             matches.sort();
-            let vals: Vec<Value> = matches.into_iter().map(|n| Value::Str(Rc::from(n.as_str()))).collect();
+            let vals: Vec<Value> = matches
+                .into_iter()
+                .map(|n| Value::Str(Rc::from(n.as_str())))
+                .collect();
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
         "fs.open" => {
@@ -324,7 +424,10 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
             match f {
                 MathFn::Nullary => Ok(Value::Float(f_nullary(name)?)),
                 MathFn::Unary => {
-                    let x = num_arg(p.first().ok_or_else(|| rt_err(format!("{} expects one argument", name)))?)?;
+                    let x = num_arg(
+                        p.first()
+                            .ok_or_else(|| rt_err(format!("{} expects one argument", name)))?,
+                    )?;
                     Ok(Value::Float(f_unary(name, x)?))
                 }
                 MathFn::Binary => {
@@ -340,7 +443,9 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
                     if name == "math.min" {
                         Ok(Value::Float(xs.into_iter().fold(f64::INFINITY, f64::min)))
                     } else if name == "math.max" {
-                        Ok(Value::Float(xs.into_iter().fold(f64::NEG_INFINITY, f64::max)))
+                        Ok(Value::Float(
+                            xs.into_iter().fold(f64::NEG_INFINITY, f64::max),
+                        ))
                     } else {
                         Err(rt_err(format!("unknown math function `{}`", name)))
                     }
@@ -349,7 +454,8 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         }
 
         // ---------------- strings ----------------
-        "strings.upper" | "strings.lower" | "strings.trim" | "strings.trim_start" | "strings.trim_end" | "strings.reverse" => {
+        "strings.upper" | "strings.lower" | "strings.trim" | "strings.trim_start"
+        | "strings.trim_end" | "strings.reverse" => {
             let s = seed_arg(&one(&args, name)?)?;
             Ok(Value::Str(Rc::from(str_unary(name, &s).as_str())))
         }
@@ -433,7 +539,10 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         }
         "strings.chars" => {
             let s = seed_arg(&one(&args, "strings.chars")?)?;
-            let vals: Vec<Value> = s.chars().map(|c| Value::Str(Rc::from(c.to_string()))).collect();
+            let vals: Vec<Value> = s
+                .chars()
+                .map(|c| Value::Str(Rc::from(c.to_string())))
+                .collect();
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
 
@@ -441,7 +550,9 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         "time.sleep" => {
             let ms = int_arg(&one(&args, "time.sleep")?)?;
             if ms < 0 {
-                return Err(rt_err("time.sleep expects a non-negative number of milliseconds"));
+                return Err(rt_err(
+                    "time.sleep expects a non-negative number of milliseconds",
+                ));
             }
             std::thread::sleep(std::time::Duration::from_millis(ms as u64));
             Ok(Value::Nil)
@@ -459,16 +570,25 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
         "os.env" => {
             let k = seed_arg(&one(&args, "os.env")?)?;
             match std::env::var(&k) {
-                Ok(v) => Ok(Value::Opt(OptV::Some(Box::new(Value::Str(Rc::from(v.as_str())))))),
+                Ok(v) => Ok(Value::Opt(OptV::Some(Box::new(Value::Str(Rc::from(
+                    v.as_str(),
+                )))))),
                 Err(_) => Ok(Value::Opt(OptV::None)),
             }
         }
         "os.args" => {
-            let vals: Vec<Value> = interp.cli_args.iter().map(|a| Value::Str(Rc::from(a.as_str()))).collect();
+            let vals: Vec<Value> = interp
+                .cli_args
+                .iter()
+                .map(|a| Value::Str(Rc::from(a.as_str())))
+                .collect();
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
         "os.cwd" => Ok(Value::Str(Rc::from(
-            std::env::current_dir().map(|p| p.to_string_lossy().to_string()).unwrap_or_default().as_str(),
+            std::env::current_dir()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default()
+                .as_str(),
         ))),
         "os.exit" => {
             let code = int_arg(&one(&args, "os.exit")?)?;
@@ -513,7 +633,12 @@ pub fn call_builtin(name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult
 // methods
 // =====================================================================
 
-pub fn call_method(receiver: &Value, name: &str, interp: &mut Interp, args: Vec<Arg>) -> RtResult<Value> {
+pub fn call_method(
+    receiver: &Value,
+    name: &str,
+    interp: &mut Interp,
+    args: Vec<Arg>,
+) -> RtResult<Value> {
     match receiver {
         Value::Str(s) => str_method(s, name, &args),
         Value::Array(a) => array_method(a, name, interp, &args),
@@ -552,7 +677,10 @@ fn str_method(s: &Rc<str>, name: &str, args: &[Arg]) -> RtResult<Value> {
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
         "chars" => {
-            let vals: Vec<Value> = s.chars().map(|c| Value::Str(Rc::from(c.to_string()))).collect();
+            let vals: Vec<Value> = s
+                .chars()
+                .map(|c| Value::Str(Rc::from(c.to_string())))
+                .collect();
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
         "starts_with" => {
@@ -582,7 +710,9 @@ fn str_method(s: &Rc<str>, name: &str, args: &[Arg]) -> RtResult<Value> {
             }
             Ok(Value::Str(Rc::from(s.repeat(n as usize).as_str())))
         }
-        "reverse" => Ok(Value::Str(Rc::from(s.chars().rev().collect::<String>().as_str()))),
+        "reverse" => Ok(Value::Str(Rc::from(
+            s.chars().rev().collect::<String>().as_str(),
+        ))),
         "char_at" => {
             let i = int_arg(p.first().ok_or_else(|| rt_err("char_at(i)"))?)?;
             let chars: Vec<char> = s.chars().collect();
@@ -629,8 +759,16 @@ fn array_method(
     match name {
         "len" => Ok(Value::Int(a.len() as i64)),
         "is_empty" => Ok(Value::Bool(a.is_empty())),
-        "first" => Ok(a.first().map(|v| OptV::Some(Box::new(v.clone()))).unwrap_or(OptV::None)).map(Value::Opt),
-        "last" => Ok(a.last().map(|v| OptV::Some(Box::new(v.clone()))).unwrap_or(OptV::None)).map(Value::Opt),
+        "first" => Ok(a
+            .first()
+            .map(|v| OptV::Some(Box::new(v.clone())))
+            .unwrap_or(OptV::None))
+        .map(Value::Opt),
+        "last" => Ok(a
+            .last()
+            .map(|v| OptV::Some(Box::new(v.clone())))
+            .unwrap_or(OptV::None))
+        .map(Value::Opt),
         "contains" => {
             let v = one_positional(args)?.clone();
             Ok(Value::Bool(a.iter().any(|x| values_equal(x, &v))))
@@ -661,7 +799,9 @@ fn array_method(
                     }
                     Err(Abort::Err(e)) => return Err(e),
                     Err(Abort::Ctrl(Ctrl::Return(v))) => v,
-                    Err(Abort::Ctrl(_)) => return Err(rt_err("unexpected control flow in closure")),
+                    Err(Abort::Ctrl(_)) => {
+                        return Err(rt_err("unexpected control flow in closure"))
+                    }
                 };
                 if name == "map" {
                     result.push(applied);
@@ -678,7 +818,9 @@ fn array_method(
                     Ok(_) => {}
                     Err(Abort::Ctrl(Ctrl::Propagate(e))) => return Err(rt_err(err_message(&e))),
                     Err(Abort::Err(e)) => return Err(e),
-                    Err(Abort::Ctrl(_)) => return Err(rt_err("unexpected control flow in closure")),
+                    Err(Abort::Ctrl(_)) => {
+                        return Err(rt_err("unexpected control flow in closure"))
+                    }
                 }
             }
             Ok(Value::Nil)
@@ -695,9 +837,7 @@ fn array_method(
         }
         "sort" => {
             let mut items = a.clone();
-            items.sort_by(|x, y| {
-                values_cmp(x, y).unwrap_or(std::cmp::Ordering::Equal)
-            });
+            items.sort_by(|x, y| values_cmp(x, y).unwrap_or(std::cmp::Ordering::Equal));
             Ok(Value::Array(Rc::new(RefCell::new(items))))
         }
         "reverse" => {
@@ -710,11 +850,19 @@ fn array_method(
 }
 
 fn one_positional(args: &[Arg]) -> RtResult<Value> {
-    positional(args).into_iter().next().ok_or_else(|| rt_err("missing argument"))
+    positional(args)
+        .into_iter()
+        .next()
+        .ok_or_else(|| rt_err("missing argument"))
 }
 
 /// Global `map(arr, f)` / `filter(arr, f)` (pipeline-friendly).
-fn ho_apply(interp: &mut Interp, items: &Rc<RefCell<Vec<Value>>>, f: &Value, name: &str) -> RtResult<Value> {
+fn ho_apply(
+    interp: &mut Interp,
+    items: &Rc<RefCell<Vec<Value>>>,
+    f: &Value,
+    name: &str,
+) -> RtResult<Value> {
     if !matches!(f, Value::Function(_)) {
         return Err(rt_err(format!("{} expects a function", name)));
     }
@@ -741,7 +889,9 @@ fn map_method(m: &Rc<RefCell<Vec<(String, Value)>>>, name: &str, args: &[Arg]) -
     match name {
         "len" => Ok(Value::Int(m.len() as i64)),
         "keys" => Ok(Value::Array(Rc::new(RefCell::new(
-            m.iter().map(|(k, _)| Value::Str(Rc::from(k.as_str()))).collect(),
+            m.iter()
+                .map(|(k, _)| Value::Str(Rc::from(k.as_str())))
+                .collect(),
         )))),
         "values" => Ok(Value::Array(Rc::new(RefCell::new(
             m.iter().map(|(_, v)| v.clone()).collect(),
@@ -749,7 +899,10 @@ fn map_method(m: &Rc<RefCell<Vec<(String, Value)>>>, name: &str, args: &[Arg]) -
         "get" => {
             let k = display(&one_positional(args)?);
             Ok(Value::Opt(
-                m.iter().find(|(kk, _)| kk == &k).map(|(_, v)| OptV::Some(Box::new(v.clone()))).unwrap_or(OptV::None),
+                m.iter()
+                    .find(|(kk, _)| kk == &k)
+                    .map(|(_, v)| OptV::Some(Box::new(v.clone())))
+                    .unwrap_or(OptV::None),
             ))
         }
         "has" => {
@@ -803,7 +956,9 @@ fn file_method(f: &Rc<RefCell<UsglFile>>, name: &str, args: &[Arg]) -> RtResult<
         "write" => {
             let handle = f.handle.as_mut().ok_or_else(|| rt_err("file is closed"))?;
             let content = display(&one_positional(args)?);
-            handle.write_all(content.as_bytes()).map_err(|e| rt_err(format!("write failed: {}", e)))?;
+            handle
+                .write_all(content.as_bytes())
+                .map_err(|e| rt_err(format!("write failed: {}", e)))?;
             Ok(Value::Nil)
         }
         "write_line" => {
@@ -816,7 +971,9 @@ fn file_method(f: &Rc<RefCell<UsglFile>>, name: &str, args: &[Arg]) -> RtResult<
             let handle = f.handle.as_mut().ok_or_else(|| rt_err("file is closed"))?;
             let mut buf = String::new();
             match handle.read_to_string(&mut buf) {
-                Ok(_) => Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(buf.as_str())))))),
+                Ok(_) => Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(
+                    buf.as_str(),
+                )))))),
                 Err(e) => Ok(err_result(format!("read failed: {}", e))),
             }
         }
@@ -826,12 +983,16 @@ fn file_method(f: &Rc<RefCell<UsglFile>>, name: &str, args: &[Arg]) -> RtResult<
             let mut br = std::io::BufReader::new(&mut *handle);
             let mut buf = String::new();
             match br.read_line(&mut buf) {
-                Ok(0) => Ok(Value::Res(Res::Err(Box::new(Value::Str(Rc::from("end of file")))))),
+                Ok(0) => Ok(Value::Res(Res::Err(Box::new(Value::Str(Rc::from(
+                    "end of file",
+                )))))),
                 Ok(_) => {
                     while buf.ends_with('\n') || buf.ends_with('\r') {
                         buf.pop();
                     }
-                    Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(buf.as_str()))))))
+                    Ok(Value::Res(Res::Ok(Box::new(Value::Str(Rc::from(
+                        buf.as_str(),
+                    ))))))
                 }
                 Err(e) => Ok(err_result(format!("read failed: {}", e))),
             }
@@ -873,7 +1034,10 @@ fn res_method(r: &Res, name: &str, args: &[Arg]) -> RtResult<Value> {
         "is_err" => Ok(Value::Bool(matches!(r, Res::Err(_)))),
         "unwrap" => match r {
             Res::Ok(v) => Ok((**v).clone()),
-            Res::Err(e) => Err(rt_err(format!("called unwrap() on error: {}", err_message(e)))),
+            Res::Err(e) => Err(rt_err(format!(
+                "called unwrap() on error: {}",
+                err_message(e)
+            ))),
         },
         "unwrap_or" => match r {
             Res::Ok(v) => Ok((**v).clone()),
@@ -907,7 +1071,9 @@ fn ok_result(v: Value) -> Value {
 }
 
 fn err_result(msg: impl Into<String>) -> Value {
-    Value::Res(Res::Err(Box::new(Value::Str(Rc::from(msg.into().as_str())))))
+    Value::Res(Res::Err(Box::new(Value::Str(Rc::from(
+        msg.into().as_str(),
+    )))))
 }
 
 fn join_dir(dir: &str, name: &str) -> Value {
