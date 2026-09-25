@@ -1,0 +1,63 @@
+// Smoke test covering many Phase 1 features.
+
+struct User {
+    id: int
+    name: string
+}
+
+enum Status {
+    Pending
+    Failed(string)
+    Active
+}
+
+fn greet(name: string) -> string {
+    return "Hello, " + name + "!"
+}
+
+fn double(x: int) -> int {
+    return x * 2
+}
+
+var acc = 0
+for i in 0..5 {
+    acc = acc + i
+}
+
+let users = [
+    User { id: 1, name: "ada" }
+    User { id: 2, name: "linus" }
+]
+
+let names = users |> map(fn(u) => u.name)
+
+let parsed = json.parse("{\"a\": [1, 2, 3], \"ok\": true}")?
+let a0 = parsed["a"][0]
+
+let status = Status.Failed("boom")
+match status {
+    Status.Pending => println("pending")
+    Status.Failed(msg) => println("failed: " + msg)
+    _ => println("other")
+}
+
+let opt: Option[int] = Some(42)
+let v = opt.unwrap
+
+let r = fs.read("missing.txt")
+if r.is_err {
+    println("read failed as expected")
+}
+
+let s = "  hi  "
+println(greet("world"))
+println("double(21) = " + str(double(21)))
+println("acc = " + str(acc))
+println("names: " + str(names))
+println("a0 = " + str(a0))
+println("len('  hi  '.trim()) = " + str(s.trim().len()))
+
+test "math" {
+    assert_eq(double(4), 8)
+    assert_eq(acc, 10)
+}

@@ -1,0 +1,18 @@
+[package]
+name = "usgl"
+version = "0.1.0"
+edition = "2021"
+description = "USGL — Universal Systems & Glue Language. Phase 1: tree-walking interpreter, REPL, formatter, test runner, CLI."
+
+[lib]
+name = "usgl"
+path = "src/lib.rs"
+
+[[bin]]
+name = "us"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

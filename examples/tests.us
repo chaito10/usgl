@@ -1,0 +1,47 @@
+// Pure test runner example (no main output).
+struct Vec2 {
+    x: float
+    y: float
+}
+
+fn len(v: Vec2) -> float {
+    return math.sqrt(v.x * v.x + v.y * v.y)
+}
+
+fn fib(n: int) -> int {
+    if n < 2 {
+        return n
+    }
+    return fib(n - 1) + fib(n - 2)
+}
+
+test "vector length" {
+    let v = Vec2 { x: 3.0, y: 4.0 }
+    assert_eq(len(v), 5.0)
+}
+
+test "fibonacci" {
+    assert_eq(fib(0), 0)
+    assert_eq(fib(1), 1)
+    assert_eq(fib(10), 55)
+}
+
+test "map keys sorted" {
+    let m = { "b": 2, "a": 1, "c": 3 }
+    assert_eq(str(m.keys.sort), "[a, b, c]")
+}
+
+test "filter keeps truthy" {
+    let out = [1, 2, 3, 4] |> filter(fn(x) => x % 2 == 0)
+    assert_eq(str(out), "[2, 4]")
+}
+
+test "json round trip" {
+    let d = json.parse("{\"n\": 42, \"ok\": true}")?
+    assert_eq(d["n"], 42)
+    assert_eq(d["ok"], true)
+}
+
+test "fails" {
+    assert_eq(1 + 1, 3)
+}
